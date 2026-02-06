@@ -21,6 +21,11 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
+    <!-- Preload critical hero images for Safari -->
+    <link rel="preload" as="image" href="Images/IOS/screenshot-1.png">
+    <link rel="preload" as="image" href="Images/IOS/screenshot-2.png">
+    <link rel="preload" as="image" href="Images/IOS/screenshot-3.png">
+
     <style>
         :root {
             --teal-50: #f0fdfa;
@@ -244,6 +249,36 @@
             line-height: 1.6;
             overflow-x: hidden;
             -webkit-font-smoothing: antialiased;
+        }
+
+        /* Safari image rendering fixes */
+        img {
+            background: transparent;
+            -webkit-transform: translateZ(0);
+            transform: translateZ(0);
+        }
+
+        /* Image loading fade-in effect for Safari */
+        .phone-mockup img,
+        .gallery-item img,
+        .timeline-screenshot img {
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .phone-mockup img.loaded,
+        .gallery-item img.loaded,
+        .timeline-screenshot img.loaded {
+            opacity: 1;
+        }
+
+        /* Force GPU acceleration for smoother rendering in Safari */
+        .phone-showcase,
+        .gallery-grid,
+        .hero-visual {
+            -webkit-transform: translateZ(0);
+            transform: translateZ(0);
+            -webkit-perspective: 1000px;
         }
 
         /* Navigation */
@@ -514,6 +549,8 @@
             position: absolute;
             transition: all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
             transform-style: preserve-3d;
+            background: transparent;
+            -webkit-transform-style: preserve-3d;
         }
 
         .phone-mockup img {
@@ -522,6 +559,9 @@
             object-fit: contain;
             filter: drop-shadow(0 30px 60px rgba(0, 0, 0, 0.25));
             transition: filter 0.5s ease;
+            background: transparent;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
         }
 
         .phone-mockup:hover img {
@@ -712,7 +752,9 @@
             transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
             aspect-ratio: 9/19.5;
             transform-style: preserve-3d;
+            -webkit-transform-style: preserve-3d;
             transform: rotateX(8deg) rotateY(0deg);
+            background: transparent;
         }
 
         .gallery-item:nth-child(1) {
@@ -742,6 +784,9 @@
             object-fit: contain;
             filter: drop-shadow(0 20px 40px rgba(0, 0, 0, 0.2));
             transition: filter 0.5s ease;
+            background: transparent;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
         }
 
         .gallery-item:hover img {
@@ -864,10 +909,17 @@
             width: 280px;
         }
 
+        .timeline-screenshot {
+            background: transparent;
+        }
+
         .timeline-screenshot img {
             width: 100%;
             display: block;
             filter: drop-shadow(0 24px 48px rgba(0, 0, 0, 0.15));
+            background: transparent;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
         }
 
         /* CTA Section */
@@ -1288,13 +1340,13 @@
             <div class="hero-visual">
                 <div class="phone-showcase">
                     <div class="phone-mockup left">
-                        <img src="Images/IOS/screenshot-2.png" alt="İlerleme Takibi">
+                        <img src="Images/IOS/screenshot-2.png" alt="İlerleme Takibi" decoding="async">
                     </div>
                     <div class="phone-mockup main">
-                        <img src="Images/IOS/screenshot-1.png" alt="Breath Ana Ekran">
+                        <img src="Images/IOS/screenshot-1.png" alt="Breath Ana Ekran" decoding="async">
                     </div>
                     <div class="phone-mockup right">
-                        <img src="Images/IOS/screenshot-3.png" alt="Sağlık İyileşmesi">
+                        <img src="Images/IOS/screenshot-3.png" alt="Sağlık İyileşmesi" decoding="async">
                     </div>
                 </div>
             </div>
@@ -1404,25 +1456,25 @@
 
             <div class="gallery-grid">
                 <div class="gallery-item">
-                    <img src="Images/IOS/screenshot-7.png" alt="Günlük İlerleme">
+                    <img src="Images/IOS/screenshot-7.png" alt="Günlük İlerleme" decoding="async" loading="lazy">
                     <div class="gallery-item-overlay">
                         <p>Günlük ilerlemenizi takip edin</p>
                     </div>
                 </div>
                 <div class="gallery-item">
-                    <img src="Images/IOS/screenshot-4.png" alt="Tetikleyici Takibi">
+                    <img src="Images/IOS/screenshot-4.png" alt="Tetikleyici Takibi" decoding="async" loading="lazy">
                     <div class="gallery-item-overlay">
                         <p>Tetikleyicilerinizi anlayın</p>
                     </div>
                 </div>
                 <div class="gallery-item">
-                    <img src="Images/IOS/screenshot-6.png" alt="Topluluk">
+                    <img src="Images/IOS/screenshot-6.png" alt="Topluluk" decoding="async" loading="lazy">
                     <div class="gallery-item-overlay">
                         <p>Toplulukla bağlantı kurun</p>
                     </div>
                 </div>
                 <div class="gallery-item">
-                    <img src="Images/IOS/screenshot-8.png" alt="Eğitim">
+                    <img src="Images/IOS/screenshot-8.png" alt="Eğitim" decoding="async" loading="lazy">
                     <div class="gallery-item-overlay">
                         <p>Bilimsel ipuçları öğrenin</p>
                     </div>
@@ -1493,7 +1545,7 @@
 
                 <div class="timeline-visual">
                     <div class="timeline-screenshot">
-                        <img src="Images/IOS/screenshot-3.png" alt="Sağlık İyileşme Takibi">
+                        <img src="Images/IOS/screenshot-3.png" alt="Sağlık İyileşme Takibi" decoding="async" loading="lazy">
                     </div>
                 </div>
             </div>
@@ -1627,6 +1679,28 @@
                     }
                 }
             });
+        });
+
+        // Image loading handler for Safari
+        function handleImageLoad(img) {
+            img.classList.add('loaded');
+        }
+
+        // Handle all app screenshot images
+        document.querySelectorAll('.phone-mockup img, .gallery-item img, .timeline-screenshot img').forEach(img => {
+            if (img.complete && img.naturalHeight !== 0) {
+                // Image already loaded (from cache)
+                img.classList.add('loaded');
+            } else {
+                // Wait for image to load
+                img.addEventListener('load', function() {
+                    handleImageLoad(this);
+                });
+                // Handle error - still show image
+                img.addEventListener('error', function() {
+                    this.classList.add('loaded');
+                });
+            }
         });
     </script>
 </body>
