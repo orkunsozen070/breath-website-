@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gizlilik Politikası - Cashly</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+            background: #0C1B2A;
+            color: #F5F5F7;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+        nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 24px 0;
+            max-width: 960px;
+            margin: 0 auto;
+            padding-left: 24px;
+            padding-right: 24px;
+        }
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+        }
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #00B14F, #33C17A);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: 800;
+            color: white;
+        }
+        .logo-text {
+            font-size: 22px;
+            font-weight: 700;
+            color: white;
+        }
+        nav a {
+            color: rgba(255,255,255,0.7);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        nav a:hover { color: white; }
+        .lang-switch {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.15);
+            padding: 5px 12px;
+            border-radius: 8px;
+            color: rgba(255,255,255,0.8);
+            font-size: 13px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: background 0.2s;
+        }
+        .lang-switch:hover { background: rgba(255,255,255,0.18); color: white; }
+        .content {
+            padding: 60px 0 80px;
+        }
+        h1 {
+            font-size: 36px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        .subtitle {
+            color: rgba(255,255,255,0.5);
+            font-size: 14px;
+            margin-bottom: 48px;
+        }
+        h2 {
+            font-size: 20px;
+            font-weight: 600;
+            margin-top: 36px;
+            margin-bottom: 12px;
+            color: #33C17A;
+        }
+        p, li {
+            font-size: 15px;
+            color: rgba(255,255,255,0.7);
+            line-height: 1.8;
+            margin-bottom: 12px;
+        }
+        ul {
+            padding-left: 24px;
+            margin-bottom: 12px;
+        }
+        a { color: #33C17A; }
+    </style>
+</head>
+<body>
+    <nav>
+        <a href="index.html" class="logo">
+            <div class="logo-icon">C</div>
+            <span class="logo-text">Cashly</span>
+        </a>
+        <div style="display:flex;gap:20px;align-items:center;">
+            <a href="index.html">Ana Sayfa</a>
+            <a href="support.html">Destek</a>
+            <a href="en/privacy.html" class="lang-switch">EN</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="content">
+            <h1>Gizlilik Politikası</h1>
+            <p class="subtitle">Son güncelleme: 27 Ağustos 2026</p>
+
+            <p>Cashly uygulamasını kullandığınız için teşekkür ederiz. Gizliliğiniz bizim için son derece önemlidir. Bu politika, uygulamamızın verilerinizi nasıl işlediğini açıklamaktadır.</p>
+
+            <h2>1. Toplanan Veriler</h2>
+            <p>Cashly, kullanıcıların finansal verilerini <strong>yalnızca cihazda ve kullanıcının kendi iCloud hesabında</strong> saklar. Biz herhangi bir kişisel veri toplamıyoruz.</p>
+            <ul>
+                <li><strong>Finansal veriler</strong> (gelir, gider, bütçe, yatırım bilgileri): Yalnızca cihazınızda ve iCloud hesabınızda saklanır.</li>
+                <li><strong>Kimlik doğrulama</strong>: Apple Sign In veya Google Sign In kullanıldığında, yalnızca temel profil bilgileri (ad, e-posta) Firebase Authentication üzerinden işlenir.</li>
+                <li><strong>Analitik</strong>: Firebase Analytics üzerinden anonim kullanım istatistikleri toplanabilir (örneğin ekran görüntülenmeleri).</li>
+            </ul>
+
+            <h2>2. Verilerin Kullanımı</h2>
+            <p>Toplanan veriler aşağıdaki amaçlarla kullanılır:</p>
+            <ul>
+                <li>Uygulamanın temel işlevlerini sunmak (finansal takip, bütçe yönetimi)</li>
+                <li>iCloud üzerinden cihazlar arası senkronizasyon sağlamak</li>
+                <li>Uygulama deneyimini iyileştirmek (anonim analitik)</li>
+            </ul>
+
+            <h2>3. Veri Paylaşımı</h2>
+            <p>Kişisel verileriniz üçüncü taraflarla <strong>kesinlikle paylaşılmaz ve satılmaz</strong>. Uygulama aşağıdaki üçüncü taraf hizmetlerini kullanır:</p>
+            <ul>
+                <li><strong>Firebase</strong> (Google): Kimlik doğrulama ve anonim analitik</li>
+                <li><strong>Apple iCloud</strong>: Veri senkronizasyonu (CloudKit)</li>
+                <li><strong>CoinGecko, Binance, Yahoo Finance API</strong>: Anlık fiyat bilgileri (kişisel veri gönderilmez)</li>
+            </ul>
+
+            <h2>4. Veri Güvenliği</h2>
+            <p>Verileriniz Apple'ın CloudKit altyapısı ile şifrelenerek saklanır. Uygulama, biyometrik kilit (Face ID / Touch ID) ile korunabilir. Tüm API iletişimi HTTPS üzerinden gerçekleşir.</p>
+
+            <h2>5. Kullanıcı Hakları</h2>
+            <p>İstediğiniz zaman:</p>
+            <ul>
+                <li>Uygulama içinden Ayarlar &gt; Hesabı Sil ile hesabınızı ve verilerinizi kalıcı olarak silebilirsiniz</li>
+                <li>Uygulamayı silerek tüm yerel verileri kaldırabilirsiniz</li>
+                <li>iCloud ayarlarından Cashly verilerini silebilirsiniz</li>
+            </ul>
+
+            <h2>6. Çocukların Gizliliği</h2>
+            <p>Cashly, 13 yaşından küçük çocuklara yönelik değildir ve bilerek çocuklardan veri toplamaz.</p>
+
+            <h2>7. Değişiklikler</h2>
+            <p>Bu gizlilik politikası zaman zaman güncellenebilir. Önemli değişiklikler uygulama içinden bildirilecektir.</p>
+
+            <h2>8. İletişim</h2>
+            <p>Gizlilik ile ilgili sorularınız için bize ulaşabilirsiniz:</p>
+            <p><a href="mailto:orkunsozen070@gmail.com">orkunsozen070@gmail.com</a></p>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cashly — Finansal hayatınız, tek uygulamada</title>
+<meta name="description" content="Gelir-gider takibi, bütçe, yatırım portföyü ve finans haberleri. Verileriniz yalnızca sizde kalır. iOS için ücretsiz.">
+<link rel="icon" type="image/png" href="assets/icon.png">
+<link rel="apple-touch-icon" href="assets/icon.png">
+<style>
+:root{
+  --ink:#16281E; --ink-deep:#101D15; --ink-soft:#1B3326;
+  --paper:#EFF1EA; --card:#FBFBF6;
+  --cream:#F2EFE2; --cream-dim:rgba(242,239,226,.55);
+  --gold:#CDA35B; --gold-deep:#A87B2F;
+  --emerald:#1E6E4C; --emerald-light:#5FB08A;
+  --root-red:#A63A2E;
+  --text:#1C2B22; --text-2:#5A6B60; --text-3:#8B978F;
+  --serif:'Iowan Old Style','Palatino Linotype',Palatino,Georgia,'Times New Roman',serif;
+  --sans:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth;overflow-x:clip}
+body{font-family:var(--sans);background:var(--ink);color:var(--cream);overflow-x:hidden;-webkit-font-smoothing:antialiased}
+img{max-width:100%;height:auto;display:block}
+a{color:inherit;text-decoration:none}
+::selection{background:var(--gold);color:var(--ink)}
+
+/* ---------- Reveal on scroll ---------- */
+.reveal{opacity:0;transform:translateY(28px);transition:opacity .8s cubic-bezier(.22,.61,.36,1),transform .8s cubic-bezier(.22,.61,.36,1)}
+.reveal.on{opacity:1;transform:none}
+.reveal.d1{transition-delay:.08s}.reveal.d2{transition-delay:.16s}.reveal.d3{transition-delay:.24s}.reveal.d4{transition-delay:.32s}
+@media(prefers-reduced-motion:reduce){
+  .reveal{opacity:1;transform:none;transition:none}
+  html{scroll-behavior:auto}
+  .g-spin,.float{animation:none!important}
+}
+
+/* ---------- Nav ---------- */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;transition:background .35s,border-color .35s,box-shadow .35s;border-bottom:1px solid transparent}
+nav.scrolled{background:rgba(16,29,21,.82);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);border-color:rgba(242,239,226,.08);box-shadow:0 8px 30px rgba(0,0,0,.25)}
+.nav-in{max-width:1140px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:14px 24px}
+.brand{display:flex;align-items:center;gap:11px}
+.brand img{width:38px;height:38px;border-radius:9px;box-shadow:0 2px 10px rgba(0,0,0,.35)}
+.brand span{font-family:var(--serif);font-size:21px;font-weight:600;letter-spacing:.02em}
+.nav-links{display:flex;align-items:center;gap:26px;font-size:14.5px}
+.nav-links a{color:var(--cream-dim);transition:color .25s}
+.nav-links a:hover{color:var(--gold)}
+.lang-pill{border:1px solid rgba(205,163,91,.45);color:var(--gold)!important;padding:5px 13px;border-radius:99px;font-weight:600;font-size:13px}
+.lang-pill:hover{background:rgba(205,163,91,.12)}
+@media(max-width:760px){.nav-links a:not(.lang-pill){display:none}}
+
+/* ---------- Hero ---------- */
+.hero{position:relative;min-height:100svh;display:flex;align-items:center;background:
+  radial-gradient(1200px 700px at 78% -10%,rgba(30,110,76,.35),transparent 60%),
+  linear-gradient(165deg,var(--ink-soft) 0%,var(--ink) 45%,var(--ink-deep) 100%)}
+.hero-guilloche{position:absolute;top:-190px;right:-190px;width:640px;height:640px;opacity:.5;pointer-events:none;will-change:transform}
+.hero-guilloche.small{top:auto;right:auto;bottom:-160px;left:-200px;width:480px;height:480px;opacity:.22}
+.g-spin{animation:spin 120s linear infinite;transform-origin:50% 50%}
+@keyframes spin{to{transform:rotate(360deg)}}
+.hero-in{position:relative;max-width:1140px;margin:0 auto;padding:130px 24px 80px;display:grid;grid-template-columns:1.05fr .95fr;gap:40px;align-items:center;width:100%}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;border:1px solid rgba(205,163,91,.4);color:var(--gold);font-size:12.5px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;padding:7px 16px;border-radius:99px;margin-bottom:26px}
+.hero-badge::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--gold)}
+h1{font-family:var(--serif);font-weight:600;font-size:clamp(40px,5.6vw,68px);line-height:1.06;letter-spacing:-.01em}
+h1 em{font-style:normal;color:var(--gold)}
+.hero p.lead{margin:24px 0 34px;font-size:18px;line-height:1.65;color:var(--cream-dim);max-width:480px}
+.cta-row{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.btn-store{display:inline-flex;align-items:center;gap:11px;background:var(--cream);color:var(--ink);font-weight:700;font-size:16px;padding:15px 26px;border-radius:15px;transition:transform .25s,box-shadow .25s;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+.btn-store:hover{transform:translateY(-3px);box-shadow:0 16px 40px rgba(0,0,0,.45)}
+.btn-store svg{width:22px;height:22px}
+.btn-ghost{color:var(--cream-dim);font-size:15px;font-weight:600;display:inline-flex;align-items:center;gap:7px;transition:color .25s}
+.btn-ghost:hover{color:var(--gold)}
+.hero-note{margin-top:20px;font-size:13px;color:rgba(242,239,226,.4)}
+
+/* phone */
+.phone-wrap{display:flex;justify-content:center;perspective:1200px}
+.phone{position:relative;width:min(310px,72vw);border-radius:48px;background:#0b120e;padding:10px;box-shadow:0 40px 90px rgba(0,0,0,.55),0 0 0 1px rgba(242,239,226,.09),inset 0 0 0 2px rgba(0,0,0,.7);will-change:transform;transition:transform .3s ease-out}
+.phone::after{content:"";position:absolute;top:22px;left:50%;transform:translateX(-50%);width:34%;height:26px;background:#0b120e;border-radius:99px;z-index:3}
+.phone img{border-radius:38px;width:100%}
+.float{animation:float 7s ease-in-out infinite}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-16px)}}
+@media(max-width:900px){
+  .hero-in{grid-template-columns:1fr;padding-top:110px;text-align:center}
+  .hero p.lead{margin-inline:auto}
+  .cta-row{justify-content:center}
+}
+
+/* ---------- Stat band ---------- */
+.stats{background:var(--ink-deep);border-top:1px solid rgba(242,239,226,.07);border-bottom:1px solid rgba(242,239,226,.07)}
+.stats-in{max-width:1140px;margin:0 auto;padding:46px 24px;display:grid;grid-template-columns:repeat(3,1fr);gap:24px;text-align:center}
+.stat b{display:block;font-family:var(--serif);font-size:clamp(30px,3.6vw,44px);font-weight:600;color:var(--gold)}
+.stat span{display:block;margin-top:6px;font-size:13.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--cream-dim)}
+@media(max-width:640px){.stats-in{grid-template-columns:1fr;gap:28px}}
+
+/* ---------- Section base ---------- */
+section.paper{background:var(--paper);color:var(--text)}
+.sec-head{max-width:760px;margin:0 auto;text-align:center;padding:0 24px}
+.kicker{font-size:12.5px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--emerald)}
+section.paper h2,section.inkpanel h2{font-family:var(--serif);font-weight:600;font-size:clamp(30px,4vw,46px);line-height:1.12;margin-top:14px}
+.sec-head p{margin-top:16px;font-size:17px;line-height:1.65;color:var(--text-2)}
+
+/* ---------- Scrollytelling ---------- */
+.showcase{padding:100px 0 40px}
+.show-grid{max-width:1140px;margin:64px auto 0;padding:0 24px;display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:start}
+.steps{display:flex;flex-direction:column}
+.step{padding:38px 34px;margin-bottom:26px;border-radius:24px;border:1px solid transparent;transition:background .4s,border-color .4s,box-shadow .4s;cursor:pointer}
+.step.active{background:var(--card);border-color:rgba(28,43,34,.08);box-shadow:0 18px 50px rgba(22,40,30,.1)}
+.step .num{font-family:var(--serif);font-size:14px;font-weight:600;color:var(--gold-deep);letter-spacing:.16em}
+.step h3{font-family:var(--serif);font-size:25px;font-weight:600;margin:10px 0 12px;color:var(--text)}
+.step p{font-size:15.5px;line-height:1.68;color:var(--text-2)}
+.step .mini-shot{display:none}
+.sticky-phone{position:sticky;top:90px;display:flex;flex-direction:column;align-items:center;gap:26px;padding-bottom:40px}
+.sticky-phone .phone{width:min(320px,80vw);background:#101d15;box-shadow:0 40px 90px rgba(22,40,30,.35),0 0 0 1px rgba(22,40,30,.12),inset 0 0 0 2px rgba(0,0,0,.65)}
+.shot-stack{position:relative;width:100%;aspect-ratio:1206/2622}
+.shot-stack img{position:absolute;inset:0;border-radius:38px;opacity:0;transform:scale(.97);transition:opacity .55s ease,transform .55s ease}
+.shot-stack img.show{opacity:1;transform:none}
+.dots{display:flex;gap:9px}
+.dots i{width:8px;height:8px;border-radius:50%;background:rgba(28,43,34,.18);transition:background .3s,transform .3s}
+.dots i.on{background:var(--emerald);transform:scale(1.25)}
+@media(max-width:900px){
+  .show-grid{grid-template-columns:1fr;gap:0}
+  .sticky-phone{display:none}
+  .step{background:var(--card);border-color:rgba(28,43,34,.08);margin-bottom:22px;padding:28px 24px}
+  .step .mini-shot{display:block;margin:22px auto 4px;width:min(240px,70vw);border-radius:30px;background:#101d15;padding:7px;box-shadow:0 22px 50px rgba(22,40,30,.28)}
+  .step .mini-shot img{border-radius:24px}
+}
+
+/* ---------- Ink privacy panel ---------- */
+section.inkpanel{position:relative;background:linear-gradient(160deg,var(--ink-soft),var(--ink-deep));color:var(--cream);overflow:hidden}
+.ink-in{position:relative;max-width:1140px;margin:0 auto;padding:110px 24px;display:grid;grid-template-columns:1.1fr .9fr;gap:56px;align-items:center}
+.ink-guilloche{position:absolute;right:-180px;top:50%;width:560px;height:560px;transform:translateY(-50%);opacity:.35;pointer-events:none}
+.inkpanel h2{color:var(--cream)}
+.inkpanel .kicker{color:var(--gold)}
+.inkpanel p.lead{margin-top:16px;font-size:16.5px;line-height:1.7;color:var(--cream-dim)}
+.priv-list{margin-top:34px;display:flex;flex-direction:column;gap:18px}
+.priv{display:flex;gap:16px;align-items:flex-start;background:rgba(242,239,226,.05);border:1px solid rgba(242,239,226,.09);padding:18px 20px;border-radius:18px;transition:background .3s,border-color .3s}
+.priv:hover{background:rgba(242,239,226,.08);border-color:rgba(205,163,91,.35)}
+.priv .ic{flex:0 0 40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:rgba(205,163,91,.14);color:var(--gold);font-size:18px}
+.priv b{display:block;font-size:15.5px;margin-bottom:4px}
+.priv span{font-size:14px;line-height:1.6;color:var(--cream-dim)}
+.serial{margin-top:38px;font-family:var(--serif);font-size:13px;letter-spacing:.28em;color:rgba(205,163,91,.65)}
+@media(max-width:900px){.ink-in{grid-template-columns:1fr;padding:80px 24px}}
+
+/* ---------- Feature chips grid ---------- */
+.chips{padding:90px 0 100px}
+.chips-grid{max-width:1140px;margin:54px auto 0;padding:0 24px;display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
+.chip{background:var(--card);border:1px solid rgba(28,43,34,.08);border-radius:22px;padding:30px 26px;transition:transform .35s,box-shadow .35s}
+.chip:hover{transform:translateY(-6px);box-shadow:0 22px 50px rgba(22,40,30,.13)}
+.chip .ic{width:46px;height:46px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:21px;background:rgba(30,110,76,.1);color:var(--emerald);margin-bottom:18px}
+.chip:nth-child(3n+2) .ic{background:rgba(205,163,91,.14);color:var(--gold-deep)}
+.chip:nth-child(3n) .ic{background:rgba(166,58,46,.1);color:var(--root-red)}
+.chip h3{font-family:var(--serif);font-size:19px;font-weight:600;color:var(--text);margin-bottom:9px}
+.chip p{font-size:14.5px;line-height:1.65;color:var(--text-2)}
+@media(max-width:900px){.chips-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:600px){.chips-grid{grid-template-columns:1fr}}
+
+/* ---------- CTA ---------- */
+.cta{position:relative;background:var(--ink);overflow:hidden;text-align:center}
+.cta-in{position:relative;max-width:760px;margin:0 auto;padding:110px 24px}
+.cta img.appicon{width:104px;height:104px;border-radius:24px;margin:0 auto 30px;box-shadow:0 24px 60px rgba(0,0,0,.5)}
+.cta h2{font-family:var(--serif);font-weight:600;font-size:clamp(30px,4vw,46px)}
+.cta p{margin:18px 0 36px;color:var(--cream-dim);font-size:16.5px;line-height:1.65}
+.cta .hero-guilloche{top:-240px;left:-220px;right:auto;opacity:.2}
+
+/* ---------- Footer ---------- */
+footer{background:var(--ink-deep);border-top:1px solid rgba(242,239,226,.07)}
+.foot-in{max-width:1140px;margin:0 auto;padding:44px 24px;display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap}
+.foot-brand{display:flex;align-items:center;gap:10px;font-family:var(--serif);font-size:17px}
+.foot-brand img{width:28px;height:28px;border-radius:7px}
+.foot-links{display:flex;gap:24px;font-size:14px;flex-wrap:wrap}
+.foot-links a{color:var(--cream-dim);transition:color .25s}
+.foot-links a:hover{color:var(--gold)}
+.foot-copy{width:100%;margin-top:6px;font-size:12.5px;color:rgba(242,239,226,.35);display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.foot-copy .serial{margin:0;font-size:11px}
+</style>
+</head>
+<body>
+
+<!-- Guilloche symbol (mirrors the app's engraved GuillocheView) -->
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <g id="guilloche" fill="none" stroke="#3D6B52" stroke-width="1">
+      <circle cx="300" cy="300" r="276"/><circle cx="300" cy="300" r="243"/><circle cx="300" cy="300" r="210"/>
+      <ellipse cx="300" cy="300" rx="276" ry="171"/>
+      <ellipse cx="300" cy="300" rx="276" ry="171" transform="rotate(22.5 300 300)"/>
+      <ellipse cx="300" cy="300" rx="276" ry="171" transform="rotate(45 300 300)"/>
+      <ellipse cx="300" cy="300" rx="276" ry="171" transform="rotate(67.5 300 300)"/>
+      <ellipse cx="300" cy="300" rx="276" ry="171" transform="rotate(90 300 300)"/>
+      <ellipse cx="300" cy="300" rx="276" ry="171" transform="rotate(112.5 300 300)"/>
+      <ellipse cx="300" cy="300" rx="276" ry="171" transform="rotate(135 300 300)"/>
+      <ellipse cx="300" cy="300" rx="276" ry="171" transform="rotate(157.5 300 300)"/>
+    </g>
+  </defs>
+</svg>
+
+<nav id="nav">
+  <div class="nav-in">
+    <a class="brand" href="#top">
+      <img src="assets/icon.png" alt="Cashly">
+      <span>Cashly</span>
+    </a>
+    <div class="nav-links">
+      <a href="#ozellikler">Özellikler</a>
+      <a href="#gizlilik">Gizlilik</a>
+      <a href="support.html">Destek</a>
+      <a class="lang-pill" href="en/index.html">EN</a>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<header class="hero" id="top">
+  <svg class="hero-guilloche g-spin" viewBox="0 0 600 600" data-parallax="0.18"><use href="#guilloche"/></svg>
+  <svg class="hero-guilloche small" viewBox="0 0 600 600" data-parallax="-0.1"><use href="#guilloche"/></svg>
+  <div class="hero-in">
+    <div>
+      <div class="hero-badge reveal">iOS için · Ücretsiz</div>
+      <h1 class="reveal d1">Paranızın<br>tam <em>kontrolü</em><br>elinizde.</h1>
+      <p class="lead reveal d2">Gelir-gider takibi, bütçe, yatırım portföyü ve dilinizde finans haberleri — hepsi banknot netliğinde tek bir uygulamada. Verileriniz yalnızca sizde kalır.</p>
+      <div class="cta-row reveal d3">
+        <a class="btn-store" href="#">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+          App Store'dan İndir
+        </a>
+        <a class="btn-ghost" href="#ozellikler">Özellikleri keşfet ↓</a>
+      </div>
+      <p class="hero-note reveal d4">Reklamsız · Abonelik yok · Veri toplanmaz</p>
+    </div>
+    <div class="phone-wrap reveal d2 float">
+      <div class="phone" id="heroPhone">
+        <img src="assets/screens/dashboard.png" alt="Cashly Özet ekranı" width="1206" height="2622">
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- STATS -->
+<div class="stats">
+  <div class="stats-in">
+    <div class="stat reveal"><b data-count="100" data-suffix="%">0%</b><span>Ücretsiz &amp; Reklamsız</span></div>
+    <div class="stat reveal d1"><b data-count="7">0</b><span>Dil Desteği</span></div>
+    <div class="stat reveal d2"><b data-count="0">0</b><span>Toplanan Kişisel Veri</span></div>
+  </div>
+</div>
+
+<!-- SCROLLYTELLING SHOWCASE -->
+<section class="paper showcase" id="ozellikler">
+  <div class="sec-head reveal">
+    <div class="kicker">Uygulamanın içinden</div>
+    <h2>Kaydırın, Cashly anlatsın.</h2>
+    <p>Aşağıdaki her adımda telefon, uygulamanın gerçek ekranlarıyla birlikte ilerler.</p>
+  </div>
+  <div class="show-grid">
+    <div class="steps" id="steps">
+      <div class="step active" data-shot="0">
+        <div class="num">01 — ÖZET</div>
+        <h3>Bakiyeniz, banknot netliğinde</h3>
+        <p>Gravür desenli özet kartında bakiyeniz, gelir-gider dengeniz ve tasarruf oranınız tek bakışta. Finans haberleri ve varlıklarınız hemen altında sıralanır.</p>
+        <div class="mini-shot"><img loading="lazy" src="assets/screens/dashboard.png" alt="Özet ekranı"></div>
+      </div>
+      <div class="step" data-shot="1">
+        <div class="num">02 — İŞLEMLER</div>
+        <h3>Her kuruşun kaydı</h3>
+        <p>Gelir ve giderlerinizi kategorilere ayırın, güne göre gruplanmış listede geçmişe dönün, tek dokunuşla filtreleyin ya da arayın.</p>
+        <div class="mini-shot"><img loading="lazy" src="assets/screens/transactions.png" alt="İşlemler ekranı"></div>
+      </div>
+      <div class="step" data-shot="2">
+        <div class="num">03 — KEŞFET</div>
+        <h3>Haberler, sizin dilinizde</h3>
+        <p>Piyasaları uygulamadan çıkmadan izleyin. Finans haberleri uygulama dilinize göre gelir; Türkçe kullanıyorsanız Türk ekonomi basınından okursunuz.</p>
+        <div class="mini-shot"><img loading="lazy" src="assets/screens/discover.png" alt="Keşfet ekranı"></div>
+      </div>
+      <div class="step" data-shot="3">
+        <div class="num">04 — BÜTÇE</div>
+        <h3>Harcamadan önce görün</h3>
+        <p>Kategori bazlı limitler koyun, halka göstergesiyle ay içindeki durumunuzu izleyin. Kira ve abonelikler gibi sabit ödemeler zamanı gelince kendiliğinden işlenir.</p>
+        <div class="mini-shot"><img loading="lazy" src="assets/screens/budget.png" alt="Bütçe ekranı"></div>
+      </div>
+      <div class="step" data-shot="4">
+        <div class="num">05 — YATIRIMLAR</div>
+        <h3>Portföyünüz canlı fiyatlarla</h3>
+        <p>Kripto, döviz ve emtia varlıklarınızı anlık kurlarla takip edin; kâr-zararınızı ve dağılımınızı tek panelde görün. Birikim hedefleri de burada.</p>
+        <div class="mini-shot"><img loading="lazy" src="assets/screens/investments.png" alt="Yatırımlar ekranı"></div>
+      </div>
+      <div class="step" data-shot="5">
+        <div class="num">06 — RAPOR</div>
+        <h3>Ayın hikâyesi, grafiklerle</h3>
+        <p>Haftalık, aylık ve yıllık raporlarda gelir-gider dengeniz, kategori dağılımınız ve tasarruf oranınız. Aylık özetinizi şık bir e-posta raporu olarak paylaşın.</p>
+        <div class="mini-shot"><img loading="lazy" src="assets/screens/report.png" alt="Rapor ekranı"></div>
+      </div>
+    </div>
+    <div class="sticky-phone">
+      <div class="phone">
+        <div class="shot-stack" id="shotStack">
+          <img src="assets/screens/dashboard.png" class="show" alt="">
+          <img loading="lazy" src="assets/screens/transactions.png" alt="">
+          <img loading="lazy" src="assets/screens/discover.png" alt="">
+          <img loading="lazy" src="assets/screens/budget.png" alt="">
+          <img loading="lazy" src="assets/screens/investments.png" alt="">
+          <img loading="lazy" src="assets/screens/report.png" alt="">
+        </div>
+      </div>
+      <div class="dots" id="dots"><i class="on"></i><i></i><i></i><i></i><i></i><i></i></div>
+    </div>
+  </div>
+</section>
+
+<!-- PRIVACY INK PANEL -->
+<section class="inkpanel" id="gizlilik">
+  <svg class="ink-guilloche g-spin" viewBox="0 0 600 600"><use href="#guilloche"/></svg>
+  <div class="ink-in">
+    <div class="reveal">
+      <div class="kicker">Gizlilik ilkesi</div>
+      <h2>Verileriniz bizde değil,<br>sizde durur.</h2>
+      <p class="lead">Cashly bir finans uygulamasının en değerli varlığının güven olduğunu bilir. Finansal verileriniz yalnızca cihazınızda ve kendi iCloud hesabınızda yaşar — bizim sunucularımızda değil.</p>
+      <div class="serial">SERİ NO · TR 2026 · CASHLY</div>
+    </div>
+    <div class="priv-list">
+      <div class="priv reveal"><div class="ic">☁</div><div><b>iCloud senkronizasyonu</b><span>Verileriniz Apple'ın CloudKit altyapısıyla şifrelenir ve yalnızca kendi cihazlarınız arasında dolaşır.</span></div></div>
+      <div class="priv reveal d1"><div class="ic">◉</div><div><b>Face ID kilidi</b><span>Uygulamayı biyometrik kilitle koruyun; bakiyenizi tek dokunuşla gizleyin.</span></div></div>
+      <div class="priv reveal d2"><div class="ic">∅</div><div><b>Sıfır veri toplama</b><span>Kişisel ya da finansal hiçbir veriniz toplanmaz, satılmaz, paylaşılmaz.</span></div></div>
+      <div class="priv reveal d3"><div class="ic">⌫</div><div><b>Tek dokunuşla silme</b><span>Hesabınızı ve tüm verilerinizi istediğiniz an uygulama içinden kalıcı olarak silebilirsiniz.</span></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURE CHIPS -->
+<section class="paper chips">
+  <div class="sec-head reveal">
+    <div class="kicker">Ve dahası</div>
+    <h2>Küçük detaylar, büyük fark</h2>
+  </div>
+  <div class="chips-grid">
+    <div class="chip reveal"><div class="ic">↻</div><h3>Sabit Ödemeler</h3><p>Kira, abonelik, taksit… Tekrarlayan ödemeler vadesinde otomatik işlenir, yaklaşanlar önceden bildirilir.</p></div>
+    <div class="chip reveal d1"><div class="ic">✉</div><h3>E-posta Raporu</h3><p>Aylık finansal özetinizi banknot estetiğinde bir e-posta raporuna dönüştürüp dilediğinizle paylaşın.</p></div>
+    <div class="chip reveal d2"><div class="ic">⌗</div><h3>Widget</h3><p>Bakiyeniz, gelir-gideriniz ve yaklaşan ödemeleriniz ana ekranınızda; uygulamayı açmadan görün.</p></div>
+    <div class="chip reveal"><div class="ic">₺</div><h3>Çoklu Para Birimi</h3><p>TRY, USD ve EUR arasında geçiş yapın; kurlar otomatik güncellensin.</p></div>
+    <div class="chip reveal d1"><div class="ic">◍</div><h3>7 Dil</h3><p>Türkçe, İngilizce, Almanca, İspanyolca, Rusça, Arapça ve Hintçe tam yerelleştirme.</p></div>
+    <div class="chip reveal d2"><div class="ic">☾</div><h3>Bildirimler</h3><p>Bütçe aşımı uyarıları, harcama anomalileri ve yaklaşan ödemeler tek merkezde toplanır.</p></div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta">
+  <svg class="hero-guilloche g-spin" viewBox="0 0 600 600"><use href="#guilloche"/></svg>
+  <div class="cta-in">
+    <img class="appicon reveal" src="assets/icon.png" alt="Cashly uygulama ikonu">
+    <h2 class="reveal d1">Finansal hayatınıza<br>bugün düzen verin.</h2>
+    <p class="reveal d2">Ücretsiz indirin; reklamsız, aboneliksiz ve verileriniz tamamen size ait.</p>
+    <div class="cta-row reveal d3" style="justify-content:center">
+      <a class="btn-store" href="#">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+        App Store'dan İndir
+      </a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="foot-in">
+    <div class="foot-brand"><img src="assets/icon.png" alt=""><span>Cashly</span></div>
+    <div class="foot-links">
+      <a href="privacy.html">Gizlilik Politikası</a>
+      <a href="terms.html">Kullanım Şartları</a>
+      <a href="support.html">Destek</a>
+      <a href="mailto:orkunsozen070@gmail.com">İletişim</a>
+      <a href="https://freshbreath.app/">Tüm Uygulamalar</a>
+      <a href="en/index.html">English</a>
+    </div>
+    <div class="foot-copy">
+      <span>© 2026 Cashly. Tüm hakları saklıdır.</span>
+      <span class="serial">CASHLY · SERİ A · İSTANBUL</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function(){
+  var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* nav */
+  var nav = document.getElementById('nav');
+  function onNav(){ nav.classList.toggle('scrolled', window.scrollY > 24); }
+  addEventListener('scroll', onNav, {passive:true}); onNav();
+
+  /* reveal */
+  var ro = new IntersectionObserver(function(es){
+    es.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('on'); ro.unobserve(e.target); } });
+  }, {threshold:.16});
+  document.querySelectorAll('.reveal').forEach(function(el){ ro.observe(el); });
+
+  /* counters */
+  var co = new IntersectionObserver(function(es){
+    es.forEach(function(e){
+      if(!e.isIntersecting) return;
+      co.unobserve(e.target);
+      var el = e.target, target = +el.dataset.count, suffix = el.dataset.suffix || '';
+      if(reduced || target === 0){ el.textContent = target + suffix; return; }
+      var t0 = null;
+      function tick(t){
+        if(!t0) t0 = t;
+        var p = Math.min((t - t0) / 1200, 1);
+        el.textContent = Math.round(target * (1 - Math.pow(1 - p, 3))) + suffix;
+        if(p < 1) requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+    });
+  }, {threshold:.6});
+  document.querySelectorAll('[data-count]').forEach(function(el){ co.observe(el); });
+
+  /* scrollytelling */
+  var steps = [].slice.call(document.querySelectorAll('.step'));
+  var shots = [].slice.call(document.querySelectorAll('#shotStack img'));
+  var dots  = [].slice.call(document.querySelectorAll('#dots i'));
+  function activate(i){
+    steps.forEach(function(s,j){ s.classList.toggle('active', j===i); });
+    shots.forEach(function(s,j){ s.classList.toggle('show', j===i); });
+    dots.forEach(function(d,j){ d.classList.toggle('on', j===i); });
+  }
+  var so = new IntersectionObserver(function(es){
+    es.forEach(function(e){
+      if(e.isIntersecting) activate(+e.target.dataset.shot);
+    });
+  }, {rootMargin:'-42% 0px -42% 0px'});
+  steps.forEach(function(s){ so.observe(s); });
+  steps.forEach(function(s){ s.addEventListener('click', function(){ activate(+s.dataset.shot); }); });
+
+  /* hero parallax + tilt */
+  if(!reduced){
+    var px = document.querySelectorAll('[data-parallax]');
+    addEventListener('scroll', function(){
+      var y = window.scrollY;
+      px.forEach(function(el){ el.style.translate = '0 ' + (y * +el.dataset.parallax) + 'px'; });
+    }, {passive:true});
+
+    var phone = document.getElementById('heroPhone');
+    if(phone && matchMedia('(pointer:fine)').matches){
+      var hero = document.querySelector('.hero');
+      hero.addEventListener('mousemove', function(e){
+        var r = hero.getBoundingClientRect();
+        var dx = (e.clientX - r.left) / r.width - .5;
+        var dy = (e.clientY - r.top) / r.height - .5;
+        phone.style.transform = 'rotateY(' + (dx*7) + 'deg) rotateX(' + (-dy*7) + 'deg)';
+      });
+      hero.addEventListener('mouseleave', function(){ phone.style.transform = ''; });
+    }
+  }
+})();
+</script>
+</body>
+</html>
