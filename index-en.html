@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FreshApps — iOS Apps</title>
-<meta name="description" content="My iOS apps: Breath (quit smoking) and Cashly (personal finance). Simple, carefully crafted, privacy-respecting apps.">
+<meta name="description" content="My iOS apps: Breath (quit smoking), Cashly (personal finance) and MarsMan (a survival game set on Mars). Simple, carefully crafted, privacy-respecting apps.">
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="apple-touch-icon" href="favicon.png">
 <style>
@@ -82,8 +82,20 @@ footer{border-top:1px solid var(--line);margin-top:44px}
 .foot{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;padding:30px 0;font-size:13.5px;color:var(--faint)}
 .foot a{color:var(--dim)}
 .foot a:hover{color:var(--text)}
+.tile.marsman{grid-column:1 / -1;min-height:320px;background:linear-gradient(150deg,#2e150c,#1d110c 55%,#140e0c)}
+.tile.marsman .glow{background:radial-gradient(520px 280px at 18% 0%,rgba(255,107,44,.22),transparent 70%)}
+.tile.marsman .t-cat{color:rgba(255,146,98,.8)}
+.tile.marsman .badge-soon{color:#ff9a6b;border-color:rgba(255,107,44,.45)}
+.tile.marsman .m-art{position:absolute;right:0;top:0;width:64%;height:100%;object-fit:cover;opacity:.92;
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 46%);mask-image:linear-gradient(90deg,transparent,#000 46%);
+  transition:transform .7s cubic-bezier(.22,.61,.36,1)}
+.tile.marsman:hover .m-art{transform:scale(1.035)}
+.tile.marsman .tile-head,.tile.marsman .desc,.tile.marsman .row{position:relative;z-index:1}
+.tile.marsman p.desc{max-width:430px}
 @media(max-width:760px){
   .tiles{grid-template-columns:1fr}
+  .tile.marsman{min-height:360px}
+  .tile.marsman .m-art{width:100%;opacity:.42;-webkit-mask-image:linear-gradient(180deg,transparent 10%,#000 70%);mask-image:linear-gradient(180deg,transparent 10%,#000 70%)}
   header.hero{padding:44px 0 36px}
 }
 @media(prefers-reduced-motion:reduce){.tile{opacity:1;transform:none;transition:none}.tile.next .dot{animation:none}}
@@ -133,6 +145,23 @@ footer{border-top:1px solid var(--line);margin-top:44px}
       <p class="desc">Income &amp; expense tracking, budgets, a live-priced investment portfolio and finance news in your language. Your data stays with you.</p>
       <div class="row">
         <span class="badge-soon">Coming Soon to the App Store</span>
+        <span class="t-link">Visit the site →</span>
+      </div>
+    </a>
+
+    <a class="tile marsman" href="marsman/">
+      <div class="glow"></div>
+      <img class="m-art" src="marsman/assets/img/v_night_sky.webp" alt="" loading="lazy" decoding="async">
+      <div class="tile-head">
+        <img src="marsman/assets/icon.png" alt="MarsMan icon">
+        <div>
+          <div class="t-name">MarsMan</div>
+          <div class="t-cat">Game · 3D Survival</div>
+        </div>
+      </div>
+      <p class="desc">You are the astronaut who crashed on Mars: guard your oxygen, build a glass-domed village, defeat seven guardians and find out why the colony went silent.</p>
+      <div class="row">
+        <span class="badge-soon">Beta on TestFlight</span>
         <span class="t-link">Visit the site →</span>
       </div>
     </a>

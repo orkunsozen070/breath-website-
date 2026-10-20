@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FreshApps — iOS Uygulamaları</title>
-<meta name="description" content="iOS uygulamalarım: Breath (sigarayı bırakma) ve Cashly (kişisel finans). Sade, özenli, gizliliğe saygılı uygulamalar.">
+<meta name="description" content="iOS uygulamalarım: Breath (sigarayı bırakma), Cashly (kişisel finans) ve MarsMan (Mars'ta hayatta kalma oyunu). Sade, özenli, gizliliğe saygılı uygulamalar.">
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="apple-touch-icon" href="favicon.png">
 <style>
@@ -82,8 +82,20 @@ footer{border-top:1px solid var(--line);margin-top:44px}
 .foot{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;padding:30px 0;font-size:13.5px;color:var(--faint)}
 .foot a{color:var(--dim)}
 .foot a:hover{color:var(--text)}
+.tile.marsman{grid-column:1 / -1;min-height:320px;background:linear-gradient(150deg,#2e150c,#1d110c 55%,#140e0c)}
+.tile.marsman .glow{background:radial-gradient(520px 280px at 18% 0%,rgba(255,107,44,.22),transparent 70%)}
+.tile.marsman .t-cat{color:rgba(255,146,98,.8)}
+.tile.marsman .badge-soon{color:#ff9a6b;border-color:rgba(255,107,44,.45)}
+.tile.marsman .m-art{position:absolute;right:0;top:0;width:64%;height:100%;object-fit:cover;opacity:.92;
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 46%);mask-image:linear-gradient(90deg,transparent,#000 46%);
+  transition:transform .7s cubic-bezier(.22,.61,.36,1)}
+.tile.marsman:hover .m-art{transform:scale(1.035)}
+.tile.marsman .tile-head,.tile.marsman .desc,.tile.marsman .row{position:relative;z-index:1}
+.tile.marsman p.desc{max-width:430px}
 @media(max-width:760px){
   .tiles{grid-template-columns:1fr}
+  .tile.marsman{min-height:360px}
+  .tile.marsman .m-art{width:100%;opacity:.42;-webkit-mask-image:linear-gradient(180deg,transparent 10%,#000 70%);mask-image:linear-gradient(180deg,transparent 10%,#000 70%)}
   header.hero{padding:44px 0 36px}
 }
 @media(prefers-reduced-motion:reduce){.tile{opacity:1;transform:none;transition:none}.tile.next .dot{animation:none}}
@@ -133,6 +145,23 @@ footer{border-top:1px solid var(--line);margin-top:44px}
       <p class="desc">Gelir-gider takibi, bütçe, canlı fiyatlı yatırım portföyü ve dilinde finans haberleri. Verilerin yalnızca sende kalır.</p>
       <div class="row">
         <span class="badge-soon">App Store'da Yakında</span>
+        <span class="t-link">Siteyi incele →</span>
+      </div>
+    </a>
+
+    <a class="tile marsman" href="marsman/">
+      <div class="glow"></div>
+      <img class="m-art" src="marsman/assets/img/v_night_sky.webp" alt="" loading="lazy" decoding="async">
+      <div class="tile-head">
+        <img src="marsman/assets/icon.png" alt="MarsMan ikonu">
+        <div>
+          <div class="t-name">MarsMan</div>
+          <div class="t-cat">Oyun · 3B Hayatta Kalma</div>
+        </div>
+      </div>
+      <p class="desc">Mars'a çakılan astronot sensin: oksijenini koru, cam kubbeli bir köy kur, yedi bekçiyi yen ve altı yıldır susan koloninin sırrını çöz.</p>
+      <div class="row">
+        <span class="badge-soon">TestFlight'ta beta</span>
         <span class="t-link">Siteyi incele →</span>
       </div>
     </a>

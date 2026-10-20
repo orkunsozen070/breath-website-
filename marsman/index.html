@@ -1,0 +1,1748 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MarsMan</title>
+<meta name="description" content="MarsMan is a 3D survival game for iPhone. Crash-land on Mars, build a home under glass, and find out why the first colony went silent.">
+<meta name="theme-color" content="#07080b">
+<meta property="og:title" content="MarsMan">
+<meta property="og:description" content="Crash-land on Mars. Build a home under glass. Find out why Red Hope went silent.">
+<meta property="og:image" content="https://freshbreath.app/marsman/assets/og.jpg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script>document.documentElement.classList.add('js');</script>
+<style>
+/* Layout concept: a fixed WebGL stage (curved LED wall of game footage + the survivor in a suit) under a mission-HUD chrome;
+   chapters pin over the stage and drive it with scroll; one light "mission briefing" interlude in the middle. */
+:root{
+  --void:#07080b;          /* deep space */
+  --ink:#0e1014;           /* panels */
+  --bone:#f2efe9;          /* text on dark */
+  --mute:rgba(242,239,233,.62);
+  --faint:rgba(242,239,233,.14);
+  --signal:#ff6b2c;        /* Mars signal orange (suit stripes, dome beams) */
+  --teal:#3fd6c6;          /* visor teal, the cool shadow of the game's art */
+  --haze:#e4e7e9;          /* briefing paper */
+  --graphite:#121418;      /* text on light */
+  --graphite-mute:rgba(18,20,24,.62);
+  --t1:#ff7a3a; --t2:#4aa3ff; --t3:#f2b43c; --t4:#ff4a4a; --t5:#a46bff;   /* suit tier accents */
+  --accent:var(--t1);
+  --display:"Archivo","Helvetica Neue",Arial,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --gutter:clamp(16px,3.4vw,52px);
+  --sb:0px;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{background:var(--void);-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--void);color:var(--bone);font-family:var(--display);font-size:16px;line-height:1.55;font-stretch:100%;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+::selection{background:var(--signal);color:var(--void)}
+a{color:inherit;text-decoration:none}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+img{display:block;max-width:100%}
+:focus-visible{outline:2px solid var(--signal);outline-offset:3px;border-radius:4px}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.mono{font-family:var(--mono);font-size:12px;letter-spacing:.06em;line-height:1.5}
+.up{text-transform:uppercase}
+
+/* ---------- stage + chrome ---------- */
+#stage{position:fixed;inset:0;width:100%;height:100%;display:block;z-index:0;pointer-events:none}
+.grain{position:fixed;inset:-50%;z-index:1;pointer-events:none;opacity:.07;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .9 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  animation:grain 1.2s steps(6) infinite}
+@keyframes grain{0%{transform:translate(0,0)}20%{transform:translate(-3%,2%)}40%{transform:translate(2%,-3%)}60%{transform:translate(-2%,-1%)}80%{transform:translate(3%,3%)}100%{transform:translate(0,0)}}
+main{position:relative;z-index:2}
+
+.nav{position:fixed;top:0;left:0;right:0;z-index:40;display:flex;align-items:center;justify-content:space-between;gap:16px;
+  padding:calc(env(safe-area-inset-top,0px) + 22px) var(--gutter) 14px;pointer-events:none;transition:color .5s}
+.nav>*{pointer-events:auto}
+.logo{display:flex;align-items:center;gap:10px;font-weight:800;font-stretch:125%;font-size:19px;letter-spacing:.01em}
+.logo i{width:11px;height:11px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#ffb27f,var(--signal) 55%,#7a2a0c);box-shadow:0 0 14px rgba(255,107,44,.55)}
+.nav__links{display:flex;gap:clamp(18px,2.6vw,40px)}
+.nav__links a{font-family:var(--mono);font-size:13px;letter-spacing:.04em;opacity:.86;transition:opacity .2s}
+.nav__links a:hover,.nav__links a.is-on{opacity:1}
+.nav__links a.is-on::before{content:"";display:inline-block;width:5px;height:5px;margin:0 8px 2px 0;background:var(--signal);border-radius:50%}
+.nav__right{display:flex;align-items:center;gap:14px}
+.pill{display:inline-flex;align-items:center;gap:10px;height:40px;padding:0 20px;border:1px solid currentColor;border-radius:999px;font-family:var(--mono);font-size:12.5px;letter-spacing:.04em;white-space:nowrap;transition:background .25s,color .25s,border-color .25s}
+.pill:hover{background:var(--bone);color:var(--void);border-color:var(--bone)}
+.pill--solid{background:var(--signal);border-color:var(--signal);color:#160803}
+.pill--solid:hover{background:var(--bone);border-color:var(--bone)}
+.pill svg{width:12px;height:12px}
+.snd{width:40px;height:40px;display:grid;place-items:center;border-radius:50%;border:1px solid var(--faint)}
+.snd span{display:flex;gap:3px;align-items:flex-end;height:14px}
+.snd b{width:2px;background:currentColor;height:4px;opacity:.75;transition:height .2s}
+.is-sound .snd b{animation:eq .9s ease-in-out infinite}
+.is-sound .snd b:nth-child(2){animation-delay:-.3s}.is-sound .snd b:nth-child(3){animation-delay:-.6s}
+@keyframes eq{0%,100%{height:4px}50%{height:14px}}
+.on-light .nav,.on-light .ruler{color:var(--graphite)}
+.on-light .snd{border-color:rgba(18,20,24,.2)}
+
+.ruler{position:fixed;left:0;top:50%;transform:translateY(-50%);z-index:30;display:flex;flex-direction:column;gap:0;pointer-events:none;transition:color .5s}
+.ruler a{pointer-events:auto;display:flex;align-items:center;gap:10px;height:22px;font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;opacity:.38;transition:opacity .3s}
+.ruler a::before{content:"";width:16px;height:1px;background:currentColor;transition:width .3s}
+.ruler a span{opacity:0;transform:translateX(-4px);transition:.3s}
+.ruler a.is-on{opacity:1}.ruler a.is-on::before{width:26px}.ruler a.is-on span{opacity:1;transform:none}
+.ruler i{display:block;width:8px;height:1px;background:currentColor;opacity:.25;margin:5px 0}
+
+.soundbar{position:fixed;left:0;right:0;bottom:0;z-index:45;display:flex;align-items:center;gap:24px;flex-wrap:wrap;
+  padding:16px var(--gutter) calc(16px + env(safe-area-inset-bottom,0px));background:rgba(7,8,11,.86);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  border-top:1px solid var(--faint);transition:transform .6s cubic-bezier(.7,0,.2,1)}
+.soundbar.is-gone{transform:translateY(110%)}
+.soundbar p{margin:0;flex:1 1 280px;font-size:14px}
+.soundbar .mono{color:var(--signal)}
+.soundbar__act{display:flex;gap:18px;align-items:center}
+.linkbtn{font-family:var(--mono);font-size:12.5px;letter-spacing:.04em;border-bottom:1px solid currentColor;padding-bottom:2px}
+
+/* ---------- loader ---------- */
+.loader{position:fixed;inset:0;z-index:60;background:var(--void);display:grid;place-items:center;transition:clip-path 1.1s cubic-bezier(.75,0,.2,1)}
+.loader.is-done{clip-path:inset(0 0 100% 0)}
+.loader__box{width:min(520px,86vw);display:grid;gap:22px}
+.loader__count{font-weight:800;font-stretch:125%;font-size:clamp(64px,13vw,128px);line-height:.9;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.loader__bar{height:1px;background:var(--faint);position:relative;overflow:hidden}
+.loader__bar i{position:absolute;inset:0;background:var(--signal);transform-origin:left;transform:scaleX(var(--lp,0));transition:transform .3s}
+.loader__log{margin:0;padding:0;list-style:none;display:grid;gap:4px;min-height:96px;color:var(--mute)}
+.loader__log li b{color:var(--bone);font-weight:500}
+
+/* ---------- common section bits ---------- */
+.chapter{position:relative;height:calc(var(--len,3) * 100svh)}
+.pin{position:sticky;top:0;height:100svh;overflow:hidden}
+.flow{position:relative;padding-block:clamp(96px,14vh,180px);padding-inline:var(--gutter)}
+.eyebrow{display:flex;gap:14px;align-items:center;color:var(--mute)}
+.eyebrow b{color:var(--signal);font-weight:500}
+.sec-title{margin:10px 0 0;font-weight:300;font-size:clamp(34px,4.6vw,72px);line-height:1.02;letter-spacing:-.02em;text-wrap:balance}
+.lede{max-width:56ch;color:var(--mute);font-size:clamp(16px,1.2vw,18px)}
+.tags{display:flex;flex-wrap:wrap;gap:8px;margin:0;padding:0;list-style:none}
+.tags li{font-family:var(--mono);font-size:11.5px;letter-spacing:.04em;padding:4px 10px;border:1px solid var(--faint);border-radius:4px;color:var(--bone)}
+.flag{display:inline-block;font-family:var(--mono);font-size:11px;letter-spacing:.05em;padding:2px 8px;background:var(--signal);color:#1a0a03;border-radius:3px}
+
+/* ---------- hero ---------- */
+.hero{position:relative;height:150svh}
+.hero .pin{display:block}
+.hero__mark{display:none}
+.no-webgl .hero__mark{display:block;position:absolute;left:0;right:0;top:30%;text-align:center;font-weight:800;font-stretch:125%;font-size:clamp(56px,15vw,260px);line-height:.9;letter-spacing:-.02em}
+.no-webgl .hero .pin{background:url(assets/img/v_night_sky.webp) center/cover}
+.hero__brief{position:absolute;left:var(--gutter);bottom:calc(var(--sb) + clamp(28px,5vh,56px));width:min(430px,calc(100% - 2*var(--gutter)));display:grid;gap:16px;transition:bottom .6s}
+.hero__brief h2{margin:0;font-weight:400;font-size:clamp(20px,1.7vw,26px);line-height:1.25;letter-spacing:-.01em;text-wrap:balance}
+.hero__cta{display:flex;gap:12px;flex-wrap:wrap}
+.tx{position:absolute;right:var(--gutter);bottom:calc(var(--sb) + clamp(28px,5vh,56px));width:min(360px,30vw);transition:bottom .6s}
+.tx h3{margin:0 0 14px;font-family:var(--mono);font-weight:500;font-size:12px;letter-spacing:.16em;color:var(--mute)}
+.tx ol{list-style:none;margin:0;padding:0;display:grid;gap:14px}
+.tx time{display:block;font-family:var(--mono);font-size:11.5px;color:var(--mute);margin-bottom:2px}
+.tx p{margin:0;font-size:14.5px;line-height:1.4}
+.orient{position:absolute;right:var(--gutter);top:calc(env(safe-area-inset-top,0px) + 86px);width:176px;display:grid;justify-items:end;gap:6px;color:var(--mute)}
+.orient__q{display:flex;gap:6px;align-items:center;font-variant-numeric:tabular-nums}
+.orient__q span{min-width:32px;text-align:right;color:var(--bone)}
+.orient__q i{width:10px;height:10px;border-radius:50%;background:var(--bone);opacity:.8;margin-right:4px}
+.gizmo{width:78px;height:78px}
+.orient button{font-family:var(--mono);font-size:11px;letter-spacing:.06em;color:var(--bone);opacity:.8}
+.orient button:hover{opacity:1}
+.tier{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(var(--sb) + clamp(28px,5vh,56px));display:grid;gap:10px;justify-items:center;transition:bottom .6s}
+.tier__name{color:var(--mute)}
+.tier__name b{color:var(--bone);font-weight:500}
+.tier__row{display:flex;gap:4px;padding:4px;border:1px solid var(--faint);border-radius:999px;background:rgba(7,8,11,.42);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.tier__row button{width:40px;height:30px;border-radius:999px;font-family:var(--mono);font-size:12px;letter-spacing:.04em;opacity:.7;transition:background .25s,opacity .25s,color .25s}
+.tier__row button:hover{opacity:1}
+.tier__row button[aria-pressed="true"]{background:var(--accent);color:#120804;opacity:1}
+.drag-hint{position:absolute;left:50%;top:calc(env(safe-area-inset-top,0px) + 92px);transform:translateX(-50%);color:var(--mute);opacity:.8}
+.hero__stagehit{position:absolute;inset:12% 26% 18%;cursor:grab;touch-action:pan-y}
+.hero__stagehit:active{cursor:grabbing}
+
+/* ---------- story / briefing (light) ---------- */
+[data-light]{color:var(--graphite)}
+.no-webgl [data-light]{background:var(--haze)}
+.brief{position:absolute;left:clamp(16px,8vw,140px);top:50%;transform:translateY(-50%);width:min(760px,calc(100% - 2*var(--gutter)));display:grid;gap:22px}
+.brief__file{color:var(--graphite-mute)}
+.brief__file b{color:var(--signal);font-weight:600}
+.brief__lines{margin:0;display:grid;justify-items:start;gap:8px;font-weight:700;font-size:clamp(24px,3vw,46px);line-height:1.12;letter-spacing:-.01em}
+.hl{--p:1;position:relative;display:inline-block;padding:.08em .22em;white-space:nowrap}
+.hl__base{color:rgba(18,20,24,.36)}
+.hl__top{position:absolute;inset:0;padding:.08em .22em;background:var(--graphite);color:#fff;clip-path:inset(0 calc((1 - var(--p)) * 100%) 0 0);white-space:nowrap}
+.brief__body{margin:0;max-width:54ch;color:var(--graphite-mute);font-size:clamp(15px,1.1vw,17px)}
+.facts{display:flex;flex-wrap:wrap;gap:18px 30px;margin:6px 0 0;color:var(--graphite-mute)}
+.facts div{display:grid;gap:2px}
+.facts dt{font-size:10.5px;letter-spacing:.14em}
+.facts dd{margin:0;color:var(--graphite);font-size:14px;font-weight:500}
+.glabel{position:absolute;left:0;top:0;transform:translate(-50%,-50%);pointer-events:none;white-space:nowrap;color:var(--graphite);transition:opacity .3s}
+.glabel::before{content:"";position:absolute;left:-12px;top:50%;width:6px;height:6px;margin-top:-3px;border-radius:50%;background:currentColor}
+.glabel--crash{color:#c2410c}
+.glabel.is-flip{text-align:right}.glabel.is-flip::before{left:auto;right:-12px}
+.glabel span{display:block;color:var(--graphite-mute);font-size:10.5px}
+
+.acts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(20px,3vw,48px);margin-top:48px}
+.act{display:grid;gap:14px;align-content:start;padding-top:18px;border-top:1px solid rgba(18,20,24,.22)}
+.act h3{margin:0;font-weight:700;font-size:clamp(20px,1.6vw,26px);letter-spacing:-.01em}
+.act p{margin:0;color:var(--graphite-mute)}
+.act .mono{color:var(--graphite)}
+.act .mono b{color:#c2410c;font-weight:600}
+.film{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:clamp(64px,10vh,120px)}
+.film figure{margin:0;display:grid;gap:8px}
+.film img{width:100%;aspect-ratio:16/9;object-fit:cover;border:1px solid rgba(18,20,24,.18);background:#c9cdd1}
+.film figcaption{display:flex;justify-content:space-between;color:var(--graphite-mute)}
+.crew{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:clamp(14px,2vw,28px);margin-top:clamp(64px,10vh,120px)}
+.crew article{display:grid;gap:8px;padding:18px 0 0;border-top:1px solid rgba(18,20,24,.22)}
+.crew h4{margin:0;font-size:20px;font-weight:700;letter-spacing:-.01em}
+.crew p{margin:0;color:var(--graphite-mute);font-size:15px}
+.crew .mono{color:#c2410c}
+
+/* ---------- world ---------- */
+.sec-head{position:absolute;left:var(--gutter);top:calc(env(safe-area-inset-top,0px) + 96px);max-width:min(560px,80vw)}
+.sec-head .sec-title{font-size:clamp(26px,2.8vw,44px)}
+.region-info{position:absolute;left:var(--gutter);bottom:clamp(28px,6vh,64px);width:min(560px,calc(100% - 2*var(--gutter)));display:none;gap:12px}
+.webgl .region-info{display:grid}
+.ri-top{display:flex;gap:12px;align-items:center;color:var(--mute)}
+.ri-title{margin:0;font-weight:400;font-size:clamp(32px,3.6vw,58px);line-height:1;letter-spacing:-.02em}
+.ri-desc{margin:0;max-width:46ch;color:var(--mute)}
+.world-count{position:absolute;right:var(--gutter);bottom:clamp(28px,6vh,64px);display:none;text-align:right;color:var(--mute)}
+.webgl .world-count{display:block}
+.world-count b{display:block;font-family:var(--display);font-weight:300;font-size:clamp(36px,4vw,64px);color:var(--bone);letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.regions{list-style:none;margin:0;padding:0}
+.webgl .regions{display:none}
+.no-webgl .regions,.no-js .regions{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:20px;padding:180px var(--gutter) 60px}
+.no-webgl #world{height:auto}.no-webgl #world .pin{position:relative;height:auto}
+.regions li{display:grid;gap:8px}
+.regions img{aspect-ratio:16/9;object-fit:cover;width:100%}
+.regions h3{margin:0;font-weight:500;font-size:22px}
+.regions p{margin:0;color:var(--mute);font-size:14px}
+
+/* ---------- survive ---------- */
+.outline-word{position:absolute;left:50%;top:50%;width:min(96vw,1700px);transform:translate(-50%,-56%);overflow:visible;pointer-events:none}
+.outline-word text{font-family:var(--display);font-weight:800;font-stretch:125%;font-size:300px;fill:none;stroke:var(--bone);stroke-width:1.4;
+  stroke-dasharray:2600;stroke-dashoffset:calc((1 - var(--d,1)) * 2600);opacity:var(--o,1)}
+.survive__cap{position:absolute;left:var(--gutter);bottom:clamp(28px,6vh,64px);max-width:420px;color:var(--mute);opacity:var(--o,1)}
+.statement{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;flex-wrap:wrap;justify-content:center;gap:10px 14px;width:min(1100px,92vw);
+  font-weight:800;font-stretch:112%;font-size:clamp(38px,6.2vw,104px);line-height:1;letter-spacing:-.02em;pointer-events:none}
+.statement .hl__base{color:rgba(255,255,255,.18)}
+.statement .hl__top{background:var(--bone);color:var(--void)}
+.statement + .mono{position:absolute;left:50%;bottom:clamp(36px,8vh,80px);transform:translateX(-50%);color:var(--bone);opacity:var(--so,0);text-align:center;width:min(560px,90vw)}
+.systems{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;margin-top:56px;background:var(--faint);border:1px solid var(--faint)}
+.sys{display:grid;gap:12px;align-content:start;padding:clamp(22px,2.4vw,34px);background:var(--void);min-height:230px}
+.sys h3{margin:0;display:flex;justify-content:space-between;gap:12px;align-items:baseline;font-weight:500;font-size:clamp(20px,1.6vw,24px);letter-spacing:-.01em}
+.sys h3 .mono{color:var(--signal)}
+.sys p{margin:0;color:var(--mute)}
+.sys .meter{height:2px;background:var(--faint);position:relative;margin-top:auto}
+.sys .meter i{position:absolute;left:0;top:0;bottom:0;width:var(--m,50%);background:var(--signal)}
+.sys .mono{color:var(--mute)}
+.sys-shots{display:grid;grid-template-columns:2fr 1fr 1fr;gap:12px;margin-top:12px}
+.sys-shots figure{margin:0;position:relative}
+.sys-shots img{width:100%;height:100%;aspect-ratio:16/9;object-fit:cover}
+.sys-shots figcaption{position:absolute;left:12px;bottom:10px;color:var(--bone);text-shadow:0 1px 8px rgba(0,0,0,.6)}
+
+/* ---------- build ---------- */
+.chapter--image .pin img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform:scale(var(--z,1.08));transform-origin:50% 60%}
+.chapter--image .pin::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(7,8,11,.55) 0%,rgba(7,8,11,0) 36%,rgba(7,8,11,0) 60%,rgba(7,8,11,.86) 100%)}
+.build__title{position:absolute;left:var(--gutter);right:var(--gutter);bottom:clamp(36px,8vh,90px);z-index:2;display:grid;gap:14px}
+.build__title h2{margin:0;font-weight:800;font-stretch:118%;font-size:clamp(46px,8.4vw,150px);line-height:.92;letter-spacing:-.03em}
+.build__title p{margin:0;max-width:60ch;color:rgba(242,239,233,.84)}
+.feat{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:clamp(14px,2vw,28px);align-items:start}
+.feat__img{grid-column:span 7;margin:0;position:relative}
+.feat__img img{width:100%;aspect-ratio:16/10;object-fit:cover}
+.feat__img figcaption{margin-top:10px;color:var(--mute)}
+.feat__list{grid-column:span 5;display:grid;gap:0;margin:0;padding:0;list-style:none;border-top:1px solid var(--faint)}
+.feat__list li{display:grid;grid-template-columns:64px 1fr;gap:6px 14px;padding:20px 0;border-bottom:1px solid var(--faint)}
+.feat__list .mono{color:var(--signal);padding-top:4px}
+.feat__list h3{margin:0;font-weight:500;font-size:20px;letter-spacing:-.01em}
+.feat__list p{margin:0;grid-column:2;color:var(--mute);font-size:15px}
+.feat--b{margin-top:clamp(56px,9vh,110px)}
+.feat--b .feat__img{grid-column:6 / span 7;order:2}
+.feat--b .feat__list{grid-column:1 / span 5;order:1}
+
+/* ---------- guardians ---------- */
+.g-wrap{position:absolute;inset:calc(env(safe-area-inset-top,0px) + 96px) var(--gutter) clamp(28px,6vh,60px);display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:clamp(20px,3vw,56px)}
+.g-left{display:grid;align-content:space-between;gap:20px;min-width:0}
+.g-list{list-style:none;margin:0;padding:0;display:grid;border-top:1px solid var(--faint)}
+.g-list li{display:grid;grid-template-columns:44px 1fr auto;align-items:baseline;gap:12px;padding:10px 0;border-bottom:1px solid var(--faint);opacity:.42;transition:opacity .35s}
+.g-list li.is-on{opacity:1}
+.g-list .mono{color:var(--mute)}
+.g-list h3{margin:0;font-weight:400;font-size:clamp(18px,1.7vw,28px);letter-spacing:-.01em;transition:transform .35s}
+.g-list li.is-on h3{transform:translateX(6px)}
+.g-list li.is-on .mono:first-child{color:var(--signal)}
+.g-view{position:relative;margin:0;display:grid;grid-template-rows:minmax(0,1fr) auto;gap:16px;min-width:0}
+.g-frame{position:relative;overflow:hidden;border:1px solid var(--faint);background:#0b0c10}
+.g-frame img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transform:scale(1.04);transition:opacity .6s,transform 1.2s cubic-bezier(.2,.7,.2,1)}
+.g-frame img.is-on{opacity:1;transform:none}
+.g-frame::after{content:"";position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 0 1px rgba(255,255,255,.06),inset 0 -120px 120px -60px rgba(7,8,11,.8)}
+.g-frame .mono{position:absolute;z-index:2;left:14px;top:12px;color:var(--bone)}
+.g-cap{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 20px;align-items:start}
+.g-cap h4{margin:0;font-weight:400;font-size:clamp(22px,2vw,32px);letter-spacing:-.01em}
+.g-cap p{margin:0;color:var(--mute)}
+.g-skills{grid-column:1 / -1;display:flex;flex-wrap:wrap;gap:8px}
+.beyond{display:grid;grid-template-columns:minmax(0,7fr) minmax(0,5fr);gap:clamp(20px,3vw,56px);align-items:end}
+.beyond figure{margin:0}
+.beyond img{width:100%;aspect-ratio:16/9;object-fit:cover}
+.beyond h3{margin:0 0 10px;font-weight:300;font-size:clamp(30px,3.4vw,56px);letter-spacing:-.02em;line-height:1.02}
+.deep{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;margin-top:clamp(56px,9vh,110px)}
+.deep figure{margin:0;display:grid;gap:8px}
+.deep img{width:100%;aspect-ratio:4/3;object-fit:cover;filter:saturate(1.1)}
+.deep figcaption{font-size:14px}
+.deep figcaption .mono{display:block;color:var(--mute);font-size:10.5px}
+.stone{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:clamp(20px,3vw,56px);align-items:center;margin-top:clamp(56px,9vh,110px)}
+.stone img{width:100%;aspect-ratio:16/10;object-fit:cover}
+.gifts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 24px;margin:18px 0 0;padding:0;list-style:none}
+.gifts li{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--faint);font-size:15px}
+.gifts li span{color:var(--mute);font-family:var(--mono);font-size:11.5px}
+
+/* ---------- armory ---------- */
+.arm{position:absolute;inset:calc(env(safe-area-inset-top,0px) + 96px) var(--gutter) clamp(28px,6vh,60px);display:grid;grid-template-columns:minmax(0,4fr) minmax(0,4fr) minmax(0,4fr);gap:20px}
+.arm__left{display:grid;align-content:space-between;gap:24px;min-width:0}
+.tiers{list-style:none;margin:0;padding:0;display:grid;gap:2px}
+.tiers li{display:grid;grid-template-columns:38px 1fr;gap:10px;align-items:baseline;padding:8px 0;opacity:.4;transition:opacity .35s}
+.tiers li.is-on{opacity:1}
+.tiers li .mono{color:var(--mute)}
+.tiers li.is-on .mono{color:var(--accent)}
+.tiers h3{margin:0;font-weight:400;font-size:clamp(20px,1.9vw,30px);letter-spacing:-.01em}
+.arm__right{grid-column:3;display:grid;align-content:end;gap:18px;min-width:0}
+.arm__desc{margin:0;color:var(--mute)}
+.stats{display:grid;gap:12px;margin:0}
+.stats div{display:grid;grid-template-columns:96px 1fr 64px;align-items:center;gap:12px}
+.stats dt{font-family:var(--mono);font-size:11px;letter-spacing:.12em;color:var(--mute)}
+.stats dd{margin:0}
+.stats .bar{height:3px;background:var(--faint);position:relative;overflow:hidden}
+.stats .bar i{position:absolute;inset:0;background:var(--accent);transform-origin:left;transform:scaleX(var(--v,0));transition:transform .7s cubic-bezier(.2,.7,.2,1),background .5s}
+.stats .val{font-family:var(--mono);font-size:13px;text-align:right;font-variant-numeric:tabular-nums}
+.sig{padding:16px 18px;border:1px solid var(--faint);border-left:2px solid var(--accent);display:grid;gap:6px;transition:border-color .5s}
+.sig .mono{color:var(--accent)}
+.sig p{margin:0;font-size:15px}
+
+/* ---------- beta + footer ---------- */
+.beta{position:relative;padding:clamp(80px,12vh,140px) var(--gutter)}
+.beta__box>i{position:absolute;inset:0;pointer-events:none}
+.beta__box{position:relative;border:1px solid var(--faint);padding:clamp(28px,5vw,80px);display:grid;grid-template-columns:minmax(0,7fr) minmax(0,5fr);gap:clamp(24px,4vw,64px);align-items:end}
+.beta__box::before,.beta__box::after,.beta__box i::before,.beta__box i::after{content:"";position:absolute;width:15px;height:15px;border-color:var(--bone);border-style:solid}
+.beta__box::before{left:-8px;top:-8px;border-width:0;background:linear-gradient(var(--bone),var(--bone)) center/1px 100% no-repeat,linear-gradient(var(--bone),var(--bone)) center/100% 1px no-repeat}
+.beta__box::after{right:-8px;bottom:-8px;border-width:0;background:linear-gradient(var(--bone),var(--bone)) center/1px 100% no-repeat,linear-gradient(var(--bone),var(--bone)) center/100% 1px no-repeat}
+.beta__box i::before{right:-8px;top:-8px;border-width:0;background:linear-gradient(var(--bone),var(--bone)) center/1px 100% no-repeat,linear-gradient(var(--bone),var(--bone)) center/100% 1px no-repeat}
+.beta__box i::after{left:-8px;bottom:-8px;border-width:0;background:linear-gradient(var(--bone),var(--bone)) center/1px 100% no-repeat,linear-gradient(var(--bone),var(--bone)) center/100% 1px no-repeat}
+.beta__mark{position:relative;margin:0;font-weight:800;font-stretch:125%;font-size:clamp(64px,12vw,220px);white-space:nowrap;line-height:.86;letter-spacing:-.035em}
+.beta__mark svg{position:absolute;width:.36em;height:.36em;left:-.2em;top:-.3em;color:var(--signal)}
+.beta__mark sup{font-size:12px;letter-spacing:.08em;vertical-align:top;margin-left:.6em;color:var(--mute);font-weight:500;font-stretch:100%;position:relative;top:1.4em}
+.beta__mark a{display:inline-flex;align-items:center;gap:.08em;font-weight:300;font-stretch:100%;font-size:.42em;vertical-align:.5em;margin-left:.2em;opacity:.9}
+.beta__copy{display:grid;gap:18px}
+.beta__copy p{margin:0;color:var(--mute)}
+.beta__copy strong{color:var(--bone);font-weight:500}
+.spec{display:grid;grid-template-columns:auto 1fr;gap:6px 20px;margin:0}
+.spec dt{color:var(--mute)}
+.spec dd{margin:0}
+.beta__note{color:var(--mute)}
+.foot{position:relative;padding:clamp(40px,8vh,90px) var(--gutter) calc(28px + env(safe-area-inset-bottom,0px));overflow:hidden}
+.foot__glow{position:absolute;left:50%;top:44%;width:120vw;height:80vh;transform:translate(-50%,-50%);background:radial-gradient(closest-side,rgba(255,107,44,.20),rgba(63,214,198,.05) 55%,rgba(7,8,11,0));pointer-events:none}
+.foot__mark{position:relative;margin:0;font-weight:800;font-stretch:125%;font-size:clamp(48px,13.4vw,260px);line-height:.85;letter-spacing:-.035em;text-align:center;white-space:nowrap}
+.foot__row{position:relative;display:flex;justify-content:space-between;align-items:end;gap:24px;flex-wrap:wrap;margin-top:clamp(40px,8vh,90px)}
+.foot__links{display:grid;grid-template-columns:repeat(3,auto);gap:6px 36px}
+.foot__links a{font-family:var(--mono);font-size:12px;opacity:.86}
+.foot__links a:hover{opacity:1}
+.foot__legal{display:grid;justify-items:end;gap:6px;color:var(--mute)}
+.foot__legal b{font-family:var(--display);font-weight:700;font-size:20px;color:var(--bone)}
+.foot__legal a{color:var(--bone);opacity:.86}.foot__legal a:hover{opacity:1}
+
+.scr{display:inline-block}
+
+/* ---------- responsive ---------- */
+@media (max-width:980px){
+  .nav__links{display:none}
+  .tx{display:none}
+  .orient{display:none}
+  .drag-hint{display:none}
+  .tier{top:calc(env(safe-area-inset-top,0px) + 80px);bottom:auto}
+  .acts{grid-template-columns:1fr}
+  .film{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .crew{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .systems{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .feat__img,.feat__list,.feat--b .feat__img,.feat--b .feat__list{grid-column:1 / -1;order:0}
+  .g-wrap{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr)}
+  .g-left .lede{display:none}
+  .g-list li{padding:6px 0}
+  .beyond,.stone{grid-template-columns:1fr}
+  .deep{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .arm{grid-template-columns:1fr;grid-template-rows:auto 1fr auto}
+  .arm__left .lede{display:none}
+  .arm__right{grid-column:1}
+  .tiers{grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+  .tiers li{grid-template-columns:1fr;gap:2px}
+  .tiers h3{font-size:13px}
+  .beta__box{grid-template-columns:1fr}
+}
+@media (max-width:640px){
+  .ruler{display:none}
+  .pill{height:36px;padding:0 14px}
+  .nav .pill{display:none}
+  .hero__brief{bottom:calc(var(--sb) + 28px)}
+  .brief{left:var(--gutter);top:calc(env(safe-area-inset-top,0px) + 84px);transform:none}
+  .brief__lines{font-size:clamp(18px,5.3vw,30px);gap:6px}
+  .facts{gap:12px 20px}
+  .systems{grid-template-columns:1fr}
+  .sys-shots{grid-template-columns:1fr}
+  .crew{grid-template-columns:1fr}
+  .gifts{grid-template-columns:1fr}
+  .deep{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .g-cap{grid-template-columns:1fr}
+  .stats div{grid-template-columns:80px 1fr 54px}
+  .arm__desc{display:none}
+  .foot__links{grid-template-columns:repeat(2,auto)}
+  .foot__legal{justify-items:start}
+  .statement{font-size:clamp(34px,11vw,56px)}
+}
+@media (max-height:520px) and (orientation:landscape){
+  .ruler{display:none}
+  .hero__brief{width:min(380px,48vw);gap:10px;bottom:calc(var(--sb) + 16px)}
+  .hero__brief .eyebrow{display:none}
+  .hero__brief h2{font-size:15px}
+  .tier{top:auto;bottom:calc(var(--sb) + 16px);left:auto;right:var(--gutter);transform:none;justify-items:end}
+  .soundbar p{display:none}
+  .soundbar{padding-block:10px}
+  .brief{top:calc(env(safe-area-inset-top,0px) + 70px);transform:none;gap:12px}
+  .brief__lines{font-size:clamp(16px,3.4vw,26px);gap:4px}
+  .brief__body,.facts{display:none}
+  .sec-head{top:64px}.sec-head .sec-title{font-size:20px}
+  .region-info{bottom:12px;gap:6px}.ri-title{font-size:26px}.ri-desc{display:none}
+  .g-wrap,.arm{top:64px;bottom:12px}
+  .g-wrap{grid-template-columns:minmax(0,5fr) minmax(0,7fr);grid-template-rows:none}
+  .g-left .sec-title,.g-left .lede{display:none}
+  .g-list li{padding:3px 0}.g-list h3{font-size:15px}
+  .g-cap p,.g-skills{display:none}.g-cap h4{font-size:18px}
+  .arm{grid-template-columns:minmax(0,4fr) minmax(0,4fr) minmax(0,4fr);grid-template-rows:none}
+  .arm__right{grid-column:3}
+  .tiers{grid-template-columns:1fr}.tiers li{padding:3px 0;grid-template-columns:28px 1fr}.tiers h3{font-size:14px}
+  .arm__left .sec-title,.arm__left .lede{display:none}
+  .stats{gap:6px}.stats div{grid-template-columns:64px 1fr 44px}.arm__desc,.sig{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+  .grain{animation:none}
+  *{scroll-behavior:auto!important}
+}
+</style>
+
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://freshbreath.app/marsman/">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://freshbreath.app/marsman/assets/og.jpg">
+<link rel="canonical" href="https://freshbreath.app/marsman/">
+<link rel="icon" type="image/png" href="assets/favicon.png">
+<link rel="apple-touch-icon" href="assets/icon.png">
+</head>
+<body>
+<div class="loader" id="loader" aria-hidden="true">
+  <div class="loader__box">
+    <div class="mono up">MarsMan · suit OS · build 0.1.0 (3)</div>
+    <div class="loader__count" id="ldCount">000</div>
+    <div class="loader__bar"><i></i></div>
+    <ul class="loader__log mono" id="ldLog"></ul>
+  </div>
+</div>
+
+<canvas id="stage" aria-hidden="true"></canvas>
+<div class="grain" aria-hidden="true"></div>
+
+<header class="nav">
+  <a class="logo" href="#top" aria-label="MarsMan, back to top"><i></i>MARSMAN</a>
+  <nav class="nav__links" aria-label="Sections">
+    <a href="#story" data-nav="story">Story</a>
+    <a href="#world" data-nav="world">World</a>
+    <a href="#guardians" data-nav="guardians">Guardians</a>
+    <a href="#armory" data-nav="armory">Armory</a>
+  </nav>
+  <div class="nav__right">
+    <a class="pill" href="#beta">Join the beta</a>
+    <button class="snd" id="sndBtn" type="button" aria-label="Turn sound on" aria-pressed="false"><span><b></b><b></b><b></b></span></button>
+  </div>
+</header>
+
+<aside class="ruler" aria-label="Page progress">
+  <a href="#top" data-ruler="top"><span>Top</span></a><i></i>
+  <a href="#story" data-ruler="story"><span>Story</span></a><i></i>
+  <a href="#world" data-ruler="world"><span>World</span></a><i></i>
+  <a href="#survive" data-ruler="survive"><span>Survive</span></a><i></i>
+  <a href="#build" data-ruler="build"><span>Build</span></a><i></i>
+  <a href="#guardians" data-ruler="guardians"><span>Guardians</span></a><i></i>
+  <a href="#armory" data-ruler="armory"><span>Armory</span></a><i></i>
+  <a href="#beta" data-ruler="beta"><span>Beta</span></a>
+</aside>
+
+<div class="soundbar" id="soundbar" role="region" aria-label="Sound">
+  <span class="mono up">▲ Sound</span>
+  <p>This site plays the game's own soundtrack. Turn it on?</p>
+  <div class="soundbar__act">
+    <button class="pill" type="button" id="sndOn">Turn sound on</button>
+    <button class="linkbtn" type="button" id="sndOff">Continue without sound</button>
+  </div>
+</div>
+
+<main>
+  <!-- 01 · HERO -->
+  <section class="hero chapter" id="top" data-chapter="top" style="--len:1.5">
+    <div class="pin">
+      <h1 class="sr-only">MarsMan</h1>
+      <div class="hero__mark" aria-hidden="true">MARSMAN</div>
+      <div class="hero__stagehit" id="stageHit" aria-hidden="true"></div>
+      <div class="hero__ui" id="heroUi">
+      <div class="orient mono up" aria-hidden="true">
+        <div>Suit orientation</div>
+        <div class="orient__q" id="quat"><i></i><span>.00</span><span>.00</span><span>.00</span><span>1.0</span></div>
+        <svg class="gizmo" id="gizmo" viewBox="-50 -50 100 100" aria-hidden="true">
+          <circle r="44" fill="none" stroke="rgba(242,239,233,.35)" stroke-width="1"/>
+          <circle r="40" fill="none" stroke="rgba(242,239,233,.15)" stroke-width="1"/>
+          <line id="gzX" x1="0" y1="0" x2="30" y2="0" stroke="#ff4d5e" stroke-width="1.4"/>
+          <line id="gzY" x1="0" y1="0" x2="0" y2="-30" stroke="#5be37a" stroke-width="1.4"/>
+          <line id="gzZ" x1="0" y1="0" x2="0" y2="0" stroke="#4aa3ff" stroke-width="1.4"/>
+          <g id="gzXd"><circle r="7" fill="#ff4d5e"/><text y="3" text-anchor="middle" font-size="8" fill="#fff" font-family="IBM Plex Mono">X</text></g>
+          <g id="gzYd"><circle r="7" fill="#5be37a"/><text y="3" text-anchor="middle" font-size="8" fill="#08130b" font-family="IBM Plex Mono">Y</text></g>
+          <g id="gzZd"><circle r="7" fill="#4aa3ff"/><text y="3" text-anchor="middle" font-size="8" fill="#fff" font-family="IBM Plex Mono">Z</text></g>
+        </svg>
+        <button type="button" id="resetQ">Reset orientation</button>
+      </div>
+      <div class="drag-hint mono up" aria-hidden="true">Drag the suit · tap to wave</div>
+      <div class="hero__brief">
+        <div class="eyebrow mono up"><b>●</b> 3D survival for iPhone · Single player</div>
+        <h2>Crash-land on Mars. Build a home under glass. Find out why Red Hope went silent.</h2>
+        <div class="hero__cta">
+          <a class="pill pill--solid" href="#beta">Join the beta <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M3 9 9 3M4 3h5v5"/></svg></a>
+          <a class="pill" href="#story">See what happened</a>
+        </div>
+      </div>
+      <div class="tier" id="tierHero">
+        <div class="tier__name mono up">Suit · <b id="tierName">Crash Suit</b></div>
+        <div class="tier__row" role="group" aria-label="Choose a suit">
+          <button type="button" data-tier="1" aria-pressed="true" aria-label="Crash Suit">I</button>
+          <button type="button" data-tier="2" aria-pressed="false" aria-label="Field Suit">II</button>
+          <button type="button" data-tier="3" aria-pressed="false" aria-label="Pioneer Suit">III</button>
+          <button type="button" data-tier="4" aria-pressed="false" aria-label="Titan Suit">IV</button>
+          <button type="button" data-tier="5" aria-pressed="false" aria-label="Quantum Suit">V</button>
+        </div>
+      </div>
+      <aside class="tx" aria-label="Latest transmissions">
+        <h3>TRANSMISSIONS</h3>
+        <ol>
+          <li><time datetime="2026-10-19">2026.10.19</time><p>TestFlight build 0.1.0 (3) is out to testers.</p></li>
+          <li><time datetime="2026-10-18">2026.10.18</time><p>Six optional guardians now wait in the Depths.</p></li>
+          <li><time datetime="2026-10-15">2026.10.15</time><p>Village construction runs in real time, even with the app closed.</p></li>
+        </ol>
+      </aside>
+      </div>
+    </div>
+  </section>
+
+  <!-- 02 · STORY (light briefing) -->
+  <section class="chapter" id="story" data-chapter="story" data-light style="--len:3">
+    <div class="pin">
+      <div class="brief">
+        <p class="brief__file mono up"><b>Mission file 01</b> · The silence</p>
+        <h2 class="brief__lines">
+          <span class="hl" data-hl="0"><span class="hl__base">Red Hope was the first</span><span class="hl__top" aria-hidden="true">Red Hope was the first</span></span>
+          <span class="hl" data-hl="1"><span class="hl__base">human colony on Mars.</span><span class="hl__top" aria-hidden="true">human colony on Mars.</span></span>
+          <span class="hl" data-hl="2"><span class="hl__base">Six years ago it went silent.</span><span class="hl__top" aria-hidden="true">Six years ago it went silent.</span></span>
+          <span class="hl" data-hl="3"><span class="hl__base">Four of us came to find them.</span><span class="hl__top" aria-hidden="true">Four of us came to find them.</span></span>
+          <span class="hl" data-hl="4"><span class="hl__base">We never landed. We fell.</span><span class="hl__top" aria-hidden="true">We never landed. We fell.</span></span>
+        </h2>
+        <p class="brief__body">The Wayfarer caught fire on entry. The crew scattered in escape pods. Yours jammed, and you rode the burning hull all the way down to the Wreck Plains. The airlock still gives oxygen. Everything else is up to you.</p>
+        <dl class="facts mono up">
+          <div><dt>Sol length</dt><dd>24 h 39 min</dd></div>
+          <div><dt>Surface average</dt><dd>−63 °C</dd></div>
+          <div><dt>Gravity</dt><dd>0.38 g</dd></div>
+          <div><dt>Air pressure</dt><dd>0.6 % of Earth</dd></div>
+        </dl>
+      </div>
+      <div class="glabel mono up" id="lbColony">Red Hope colony<span>Last signal · 6 years ago</span></div>
+      <div class="glabel glabel--crash mono up" id="lbCrash">Wreck Plains<span>Wayfarer · impact site</span></div>
+      <div class="glabel mono up" id="lbPath">Entry trajectory<span>Wayfarer · on fire</span></div>
+    </div>
+  </section>
+  <section class="flow" id="acts" data-light data-chapter="acts">
+    <div class="eyebrow mono up"><b>●</b> How it plays out</div>
+    <h2 class="sec-title" style="max-width:20ch">Two acts and an ending you choose.</h2>
+    <div class="acts">
+      <article class="act">
+        <p class="mono up">Act I · The signal</p>
+        <h3>Get a message to Earth.</h3>
+        <p>Rebuild the Wayfarer's deep-space transmitter, seven parts in all. Find your crew across the canyons, the lava tubes and the ice. Then send the signal home.</p>
+        <p class="mono up">Earth replies: <b>rescue in 2 years · room for 4</b></p>
+      </article>
+      <article class="act">
+        <p class="mono up">Act II · The Ancient Road</p>
+        <h3>Build a ship for everyone.</h3>
+        <p>Under the surface lies the Depths, a city the Ancients left when they went to the stars. Their archive marks a road: clear the wreck, raise a shipyard, enter the Dead Colony, and take a core from each of seven guardians.</p>
+        <p class="mono up">Seven cores · <b>one starship</b></p>
+      </article>
+      <article class="act">
+        <p class="mono up">Ending · Your call</p>
+        <h3>Fly home, or stay.</h3>
+        <p>Board the starship with the survivors who want Earth, or stay with the ones who now call Mars home. Either way, the world keeps running after the credits.</p>
+        <p class="mono up">Free play continues <b>after the end</b></p>
+      </article>
+    </div>
+    <div class="film">
+      <figure><img src="assets/img/i_space_blast.webp" alt="The Wayfarer bursting into flames above Mars" loading="lazy" decoding="async"><figcaption class="mono up"><span>01 · Entry</span><span>T+08 s</span></figcaption></figure>
+      <figure><img src="assets/img/i_descent_a.webp" alt="The burning ship falling through the Martian sky" loading="lazy" decoding="async"><figcaption class="mono up"><span>02 · Descent</span><span>T+11 s</span></figcaption></figure>
+      <figure><img src="assets/img/i_slide.webp" alt="The ship sliding across the Wreck Plains after impact" loading="lazy" decoding="async"><figcaption class="mono up"><span>03 · Impact</span><span>T+19 s</span></figcaption></figure>
+      <figure><img src="assets/img/i_jump.webp" alt="The astronaut jumping out of the wreck's hatch" loading="lazy" decoding="async"><figcaption class="mono up"><span>04 · Alive</span><span>T+22 s</span></figcaption></figure>
+    </div>
+    <div class="crew">
+      <article><p class="mono up">Botanist</p><h4>Leyla Erkan</h4><p>Came to see if Mars could bloom. Give her a greenhouse and she will feed the village.</p></article>
+      <article><p class="mono up">Engineer</p><h4>Baran Yücel</h4><p>His call comes from somewhere deep in the canyons. Keeps the transmitter and the drones alive.</p></article>
+      <article><p class="mono up">Pilot</p><h4>Nehir Aksoy</h4><p>Promised her daughter Duru she would be home. Her pod came down near the ship's torn-off tail.</p></article>
+      <article><p class="mono up">Survivor</p><h4>You</h4><p>The one whose pod jammed. You start with a crowbar, five oxygen cartridges and a wreck.</p></article>
+    </div>
+  </section>
+
+  <!-- 03 · WORLD -->
+  <section class="chapter" id="world" data-chapter="world" style="--len:4.4">
+    <div class="pin">
+      <header class="sec-head">
+        <div class="eyebrow mono up"><b>●</b> World · 7 regions · 1 city below · 1 city of the dead</div>
+        <h2 class="sec-title">A continent of broken plates, bridged by rope.</h2>
+      </header>
+      <div class="region-info" aria-live="polite">
+        <div class="ri-top mono up"><span id="riLv">Lv 1–3</span><span class="flag" id="riFlag">Your village grows here</span></div>
+        <h3 class="ri-title"><span class="scr" id="riTitle">Wreck Plains</span></h3>
+        <p class="ri-desc" id="riDesc">Where the Wayfarer came down. Scrap, ice pockets and your first night.</p>
+        <ul class="tags" id="riTags"><li>scrap</li><li>mineral</li><li>ice</li></ul>
+      </div>
+      <div class="world-count mono up"><b id="wcCur">01</b>of 09 · scroll to travel</div>
+      <ol class="regions" id="regionList">
+        <li data-img="assets/img/card_plains.webp" data-lv="Lv 1–3" data-flag="Your village grows here" data-tags="scrap,mineral,ice"><img src="assets/img/card_plains.webp" alt="" loading="lazy"><h3>Wreck Plains</h3><p>Where the Wayfarer came down. Scrap, ice pockets and your first night.</p></li>
+        <li data-img="assets/img/card_canyon.webp" data-lv="Lv 3–5" data-flag="Sand Wyrm territory" data-tags="conductive ore,quartz,rope bridges"><img src="assets/img/card_canyon.webp" alt="" loading="lazy"><h3>Broken Canyons</h3><p>Narrow gorges, wind-scoured caves and a radio call from somewhere below.</p></li>
+        <li data-img="assets/img/card_lava.webp" data-lv="Lv 5–7" data-flag="Magma Tyrant" data-tags="sulfur,black glass,mineral"><img src="assets/img/card_lava.webp" alt="" loading="lazy"><h3>Lava Tubes</h3><p>Sulfur steam and black glass. The transmitter's control unit is somewhere down here.</p></li>
+        <li data-img="assets/img/card_ice.webp" data-lv="Lv 7–9" data-flag="Blizzards" data-tags="ice,energy crystal,station logs"><img src="assets/img/card_ice.webp" alt="" loading="lazy"><h3>Ice Plateau</h3><p>Frost Station's last three logs, and the coldest nights on the map.</p></li>
+        <li data-img="assets/img/card_rocky.webp" data-lv="Lv 9–11" data-flag="Mountain Behemoth" data-tags="titanium,quartz,ancient door"><img src="assets/img/card_rocky.webp" alt="" loading="lazy"><h3>Rocky Hills</h3><p>Stepped cliffs, titanium seams and a sealed Ancient door that will not open yet.</p></li>
+        <li data-img="assets/img/card_volcanic.webp" data-lv="Lv 11–13" data-flag="O₂ ×1.7 without cooling" data-tags="heat,ash,alloy bridge"><img src="assets/img/card_volcanic.webp" alt="" loading="lazy"><h3>Volcanic Ridge</h3><p>Ash, heat and the Wayfarer's torn-off tail, guarded by something armored.</p></li>
+        <li data-img="assets/img/card_green.webp" data-lv="Lv 17–19" data-flag="Spore Mother" data-tags="vegetables,bio-matter,spores"><img src="assets/img/card_green.webp" alt="" loading="lazy"><h3>Green Valley</h3><p>Grass, fruit trees and giant mushrooms on Mars. The reason nobody stays long is in the air.</p></li>
+        <li data-img="assets/img/card_depths.webp" data-lv="Lv 14–17" data-flag="6 optional guardians" data-tags="abyss bridges,lava falls,Silent Sea"><img src="assets/img/card_depths.webp" alt="" loading="lazy"><h3>The Depths</h3><p>A sealed city under a stone sky, with abyss bridges, lava falls and the Silent Sea.</p></li>
+        <li data-img="assets/img/card_colony.webp" data-lv="Lv 14–16" data-flag="The Last Commander" data-tags="horde,wire fence,Colony Hall"><img src="assets/img/card_colony.webp" alt="" loading="lazy"><h3>Dead Colony</h3><p>Red Hope's own streets. Something locked the Colony Hall from the inside.</p></li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- 04 · SURVIVE -->
+  <section class="chapter" id="survive" data-chapter="survive" style="--len:3.4">
+    <div class="pin">
+      <svg class="outline-word" viewBox="0 0 1700 380" aria-hidden="true"><text x="850" y="300" text-anchor="middle" textLength="1640" lengthAdjust="spacingAndGlyphs">SURVIVE</text></svg>
+      <p class="survive__cap mono up">Your suit keeps a thin layer of Earth around you. Everything outside it is trying to get in.</p>
+      <div class="statement" aria-label="Air. Water. Warmth. Light.">
+        <span class="hl" data-st="0"><span class="hl__base">Air.</span><span class="hl__top" aria-hidden="true">Air.</span></span>
+        <span class="hl" data-st="1"><span class="hl__base">Water.</span><span class="hl__top" aria-hidden="true">Water.</span></span>
+        <span class="hl" data-st="2"><span class="hl__base">Warmth.</span><span class="hl__top" aria-hidden="true">Warmth.</span></span>
+        <span class="hl" data-st="3"><span class="hl__base">Light.</span><span class="hl__top" aria-hidden="true">Light.</span></span>
+      </div>
+      <p class="mono up">The four things you will spend every sol fighting for.</p>
+    </div>
+  </section>
+  <section class="flow" id="systems" data-chapter="systems">
+    <div class="eyebrow mono up"><b>●</b> Survival systems</div>
+    <h2 class="sec-title" style="max-width:18ch">Six ways Mars tries to kill you.</h2>
+    <div class="systems">
+      <article class="sys"><h3>Oxygen <span class="mono">O₂</span></h3><p>Every breath outside the dome comes out of your tank. You start with five spare cartridges. Upgrade the tank, or learn where the oxygen springs are.</p><div class="mono up">Spare cartridges at start · 5</div><div class="meter" style="--m:72%"><i></i></div></article>
+      <article class="sys"><h3>Water &amp; food <span class="mono">H₂O</span></h3><p>Dig ice and melt it. Grow vegetables in the greenhouse, hunt, cook. A full stomach and a full flask bring your health back fast.</p><div class="mono up">Health regen when fed · ×6</div><div class="meter" style="--m:58%"><i></i></div></article>
+      <article class="sys"><h3>Body heat <span class="mono">°C</span></h3><p>Frozen nights and volcanic heat both drain you. Heaters, insulated suit linings and a cooling module keep your core where it belongs.</p><div class="mono up">Volcanic Ridge without cooling · O₂ ×1.7</div><div class="meter" style="--m:84%"><i></i></div></article>
+      <article class="sys"><h3>Dust &amp; meteors <span class="mono">SKY</span></h3><p>Dust storms close in without warning. Meteor showers light up the night and burn whatever they hit, you included.</p><div class="mono up">Watch them from the observatory</div><div class="meter" style="--m:40%"><i></i></div></article>
+      <article class="sys"><h3>The horde <span class="mono">8–11 SOLS</span></h3><p>Once the village grows, a swarm comes every eight to eleven sols. You get a warning at dawn. That night it hits in three waves and breaks what it reaches.</p><div class="mono up">Repair damaged buildings by hand</div><div class="meter" style="--m:66%"><i></i></div></article>
+      <article class="sys"><h3>Night <span class="mono">19:30–05:30</span></h3><p>After dark the plains belong to the creatures. Fire a flare and they will not step into the light. Or skip ahead to morning.</p><div class="mono up">Creatures avoid flare light</div><div class="meter" style="--m:50%"><i></i></div></article>
+    </div>
+    <div class="sys-shots">
+      <figure><img src="assets/img/x_nova.webp" alt="A violet Quantum Burst knocking back a pack of rock creatures" loading="lazy" decoding="async"><figcaption class="mono up">Quantum Burst · 8 m · 60 dmg</figcaption></figure>
+      <figure><img src="assets/img/z_night.webp" alt="The Dead Colony under a night sky full of galaxies" loading="lazy" decoding="async"><figcaption class="mono up">Night · Dead Colony</figcaption></figure>
+      <figure><img src="assets/img/card_ice.webp" alt="An astronaut in a gold suit crossing the snow of the Ice Plateau" loading="lazy" decoding="async"><figcaption class="mono up">Blizzard · Ice Plateau</figcaption></figure>
+    </div>
+  </section>
+
+  <!-- 05 · BUILD -->
+  <section class="chapter chapter--image" id="build" data-chapter="build" style="--len:1.7">
+    <div class="pin">
+      <img src="assets/img/v_night_sky.webp" alt="The glass dome of the village at night, under a sky full of galaxies" id="buildImg" decoding="async">
+      <div class="build__title">
+        <div class="eyebrow mono up" style="color:rgba(242,239,233,.8)"><b>●</b> Build · From scrap shelter to sealed dome</div>
+        <h2>A home<br>under glass.</h2>
+        <p>Start with a shelter made of scrap. End with a glass-domed village: a ring road, a fountain at every junction, a greenhouse, an orchard and a waterfall fed from the Silent Sea.</p>
+      </div>
+    </div>
+  </section>
+  <section class="flow" id="village" data-chapter="village">
+    <div class="feat">
+      <figure class="feat__img"><img src="assets/img/v_aerial_morning.webp" alt="Aerial view of the glass-domed village with its ring road and fountains" loading="lazy" decoding="async"><figcaption class="mono up">Village plan · ring road · 4 avenues · fountains</figcaption></figure>
+      <ol class="feat__list">
+        <li><span class="mono">01</span><h3>Construction in real time</h3><p>Builds keep going while the app is closed. A shelter takes 30 seconds. The shipyard takes four hours.</p></li>
+        <li><span class="mono">02</span><h3>Engineers and a cargo drone</h3><p>Two engineers raise every wall while a drone hauls the crates. More crew means more builds at once.</p></li>
+        <li><span class="mono">03</span><h3>Magnetic parcels</h3><p>Plots snap to the street and doors turn to face the road, so the village lays itself out around you.</p></li>
+      </ol>
+    </div>
+    <div class="feat feat--b">
+      <figure class="feat__img"><img src="assets/img/v_inside_quantum.webp" alt="Inside the dome: the burning wreck of the Wayfarer in the village square" loading="lazy" decoding="async"><figcaption class="mono up">The Wayfarer still burns in the square</figcaption></figure>
+      <ol class="feat__list">
+        <li><span class="mono">04</span><h3>Power through the night</h3><p>Solar panels feed the grid, batteries carry it after sunset. Turrets draw power too, so plan before you upgrade.</p></li>
+        <li><span class="mono">05</span><h3>Defenses that grow</h3><p>Crossbow turrets become lasers. The fence holds the gates, and the gates mend themselves between raids.</p></li>
+        <li><span class="mono">06</span><h3>Neighbors</h3><p>Survivors you bring back move in, tell you about the colony they lost, and help the village grow.</p></li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- 06 · GUARDIANS -->
+  <section class="chapter" id="guardians" data-chapter="guardians" style="--len:4.6">
+    <div class="pin">
+      <div class="g-wrap">
+        <div class="g-left">
+          <div>
+            <div class="eyebrow mono up"><b>●</b> Guardians · Act II</div>
+            <h2 class="sec-title" style="font-size:clamp(28px,3vw,50px)">Seven guardians stand on the Ancient Road.</h2>
+            <p class="lede">Each waits behind a portal in its own region. Beat it, solve the seal chamber, and carry its core back to the shipyard. The next door only opens when the last core is in.</p>
+          </div>
+          <ol class="g-list" id="gList">
+            <li class="is-on" data-img="assets/img/g_scrap_titan.webp" data-epi="An iron giant born from fallen ships." data-skills="Magnet Pull,Scrap Cyclone,Rail Charge" data-core="Fusion Reactor"><span class="mono">01</span><h3>Scrap Titan</h3><span class="mono up">Wreck Plains</span></li>
+            <li data-img="assets/img/g_sand_wyrm.webp" data-epi="The giant that swims beneath the canyons." data-skills="Burrow Ambush,Sand Twister,Sand Wave" data-core="Hyper Coil"><span class="mono">02</span><h3>Sand Wyrm</h3><span class="mono up">Broken Canyons</span></li>
+            <li data-img="assets/img/g_magma_tyrant.webp" data-epi="The burning ruler of the lava tubes." data-skills="Ring of Fire,Lava Pillars,Lava Bombs" data-core="Plasma Injector"><span class="mono">03</span><h3>Magma Tyrant</h3><span class="mono up">Lava Tubes</span></li>
+            <li data-img="assets/img/g_frost_queen.webp" data-epi="The frozen throne of the Ice Plateau." data-skills="Ice Lances,Freezing Breath,Glacier Rift" data-core="Cryo Cooler"><span class="mono">04</span><h3>Frost Queen</h3><span class="mono up">Ice Plateau</span></li>
+            <li data-img="assets/img/g_behemoth.webp" data-epi="The mountain of the Rocky Hills, awake." data-skills="Boulder Throw,Fault Fissures,Mountain Leap" data-core="Titan Frame"><span class="mono">05</span><h3>Mountain Behemoth</h3><span class="mono up">Rocky Hills</span></li>
+            <li data-img="assets/img/g_ash_wraith.webp" data-epi="A shadow risen from volcanic ash." data-skills="Ash Step,Ash Vortex,Ember Skulls" data-core="Ion Thruster"><span class="mono">06</span><h3>Ash Wraith</h3><span class="mono up">Volcanic Ridge</span></li>
+            <li data-img="assets/img/g_spore_mother.webp" data-epi="The poisoned heart of the Green Valley." data-skills="Spore Cloud,Vine Snare,Thorn Storm" data-core="Biofuel Cell"><span class="mono">07</span><h3>Spore Mother</h3><span class="mono up">Green Valley</span></li>
+          </ol>
+        </div>
+        <figure class="g-view">
+          <div class="g-frame" id="gFrame"><span class="mono up" id="gTag">Guardian 01 / 07</span></div>
+          <figcaption class="g-cap">
+            <h4 id="gName">Scrap Titan</h4>
+            <span class="flag" id="gCore">Core · Fusion Reactor</span>
+            <p id="gEpi">An iron giant born from fallen ships.</p>
+            <ul class="tags g-skills" id="gSkills"><li>Magnet Pull</li><li>Scrap Cyclone</li><li>Rail Charge</li></ul>
+          </figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+  <section class="flow" id="beyond" data-chapter="beyond">
+    <div class="beyond">
+      <figure><img src="assets/img/g_commander.webp" alt="The Last Commander raising his arm in the Dead Colony's square under the night sky" loading="lazy" decoding="async"></figure>
+      <div>
+        <div class="eyebrow mono up"><b>●</b> Dead Colony · The square</div>
+        <h3>Someone kept the Colony Hall shut for six years.</h3>
+        <p class="lede">He is still standing in front of it, in a red suit with a commander's tag. He calls the horde, bursts the dead, and grabs you when you get close. The key card to the hall is on him.</p>
+        <ul class="tags" style="margin-top:16px"><li>Horde Call</li><li>Corpse Burst</li><li>Rotten Grip</li></ul>
+      </div>
+    </div>
+    <div class="eyebrow mono up" style="margin-top:clamp(64px,10vh,120px)"><b>●</b> Optional · The Depths</div>
+    <h3 class="sec-title" style="font-size:clamp(26px,2.6vw,42px);max-width:26ch">Six more sleep under the stone sky. Nobody makes you wake them.</h3>
+    <div class="deep">
+      <figure><img src="assets/img/dg_1.webp" alt="The Ancient Digger" loading="lazy"><figcaption><span class="mono up">Deep Wells</span>Ancient Digger</figcaption></figure>
+      <figure><img src="assets/img/dg_2.webp" alt="The Forgecaster" loading="lazy"><figcaption><span class="mono up">Ember Foundry</span>Forgecaster</figcaption></figure>
+      <figure><img src="assets/img/dg_3.webp" alt="The Silent Serpent" loading="lazy"><figcaption><span class="mono up">Silent Sea</span>Silent Serpent</figcaption></figure>
+      <figure><img src="assets/img/dg_4.webp" alt="The Basalt Giant" loading="lazy"><figcaption><span class="mono up">Basalt Keeps</span>Basalt Giant</figcaption></figure>
+      <figure><img src="assets/img/dg_5.webp" alt="The Prism Warden raising crystal spears" loading="lazy"><figcaption><span class="mono up">Crystal Bazaar</span>Prism Warden</figcaption></figure>
+      <figure><img src="assets/img/dg_6.webp" alt="The Elder Glowcap" loading="lazy"><figcaption><span class="mono up">Fungal Gardens</span>Elder Glowcap</figcaption></figure>
+    </div>
+    <div class="stone">
+      <img src="assets/img/g_stone.webp" alt="A glowing boss stone left behind where the Spore Mother fell" loading="lazy" decoding="async">
+      <div>
+        <div class="eyebrow mono up"><b>●</b> Boss stones</div>
+        <h3 class="sec-title" style="font-size:clamp(26px,2.6vw,42px)">What falls leaves a stone. Touch it, and its signature move is yours.</h3>
+        <ul class="gifts">
+          <li>Scrap Cyclone<span>Scrap Titan</span></li><li>Sand Wave<span>Sand Wyrm</span></li>
+          <li>Lava Pillars<span>Magma Tyrant</span></li><li>Ice Lances<span>Frost Queen</span></li>
+          <li>Mountain Leap<span>Behemoth</span></li><li>Ash Step<span>Ash Wraith</span></li>
+          <li>Spore Cloud<span>Spore Mother</span></li><li>Corpse Burst<span>Last Commander</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 07 · ARMORY -->
+  <section class="chapter" id="armory" data-chapter="armory" style="--len:4">
+    <div class="pin">
+      <div class="arm">
+        <div class="arm__left">
+          <div>
+            <div class="eyebrow mono up"><b>●</b> Armory · 5 suits</div>
+            <h2 class="sec-title" style="font-size:clamp(28px,3vw,50px)">Five suits. One survivor.</h2>
+            <p class="lede">Every suit is a separate model with its own colors and proportions. Upgrade at the armory with what the regions give you.</p>
+          </div>
+          <ol class="tiers" id="tierList">
+            <li class="is-on" data-tier="1"><span class="mono">I</span><h3>Crash Suit</h3></li>
+            <li data-tier="2"><span class="mono">II</span><h3>Field Suit</h3></li>
+            <li data-tier="3"><span class="mono">III</span><h3>Pioneer Suit</h3></li>
+            <li data-tier="4"><span class="mono">IV</span><h3>Titan Suit</h3></li>
+            <li data-tier="5"><span class="mono">V</span><h3>Quantum Suit</h3></li>
+          </ol>
+        </div>
+        <div class="arm__right">
+          <p class="arm__desc" id="armDesc">The standard suit you crashed in. Basic protection, nothing more.</p>
+          <dl class="stats" id="armStats">
+            <div><dt>HEALTH</dt><dd class="bar"><i></i></dd><dd class="val">+0</dd></div>
+            <div><dt>STAMINA</dt><dd class="bar"><i></i></dd><dd class="val">+0</dd></div>
+            <div><dt>ATTACK</dt><dd class="bar"><i></i></dd><dd class="val">×1.0</dd></div>
+            <div><dt>ARMOR</dt><dd class="bar"><i></i></dd><dd class="val">0 %</dd></div>
+            <div><dt>OXYGEN</dt><dd class="bar"><i></i></dd><dd class="val">×1.0</dd></div>
+            <div><dt>CLIMATE</dt><dd class="bar"><i></i></dd><dd class="val">0 %</dd></div>
+          </dl>
+          <div class="sig" id="armSig"><span class="mono up">Signature</span><p>None yet. You have a crowbar and a lot of determination.</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 08 · BETA -->
+  <section class="beta" id="beta" data-chapter="beta">
+    <div class="beta__box"><i aria-hidden="true"></i>
+      <h2 class="beta__mark"><span class="sr-only">MarsMan </span>BETA<sup class="mono">0.1.0 (3)</sup><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 0c.6 6.4 5.6 11.4 12 12-6.4.6-11.4 5.6-12 12-.6-6.4-5.6-11.4-12-12C6.4 11.4 11.4 6.4 12 0z"/></svg></h2>
+      <div class="beta__copy">
+        <p><strong>Now in closed beta on TestFlight.</strong> Built for iPhone in landscape, with touch controls tuned for one thumb on the move and one on the fight.</p>
+        <dl class="spec mono up">
+          <dt>Platform</dt><dd>iPhone</dd>
+          <dt>Genre</dt><dd>3D survival · base building</dd>
+          <dt>Players</dt><dd>Single player</dd>
+          <dt>Target</dt><dd>60 fps on iPhone 16 Pro</dd>
+          <dt>Build</dt><dd>0.1.0 (3)</dd>
+        </dl>
+        <div class="hero__cta">
+          <a class="pill pill--solid" id="betaLink" href="#beta" data-placeholder="PLACEHOLDER_TESTFLIGHT_PUBLIC_LINK">Request a TestFlight invite <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M3 9 9 3M4 3h5v5"/></svg></a>
+        </div>
+        <p class="beta__note mono up" id="betaNote">Public invite link opens soon.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer class="foot" id="end" data-chapter="end">
+    <div class="foot__glow" aria-hidden="true"></div>
+    <p class="foot__mark" aria-hidden="true">MARSMAN</p>
+    <div class="foot__row">
+      <nav class="foot__links" aria-label="Footer">
+        <a href="#top">Top</a><a href="#world">World</a><a href="#armory">Armory</a>
+        <a href="#story">Story</a><a href="#guardians">Guardians</a><a href="#beta">Beta</a>
+      </nav>
+      <div class="foot__legal mono">
+        <a href="https://freshbreath.app/">A FreshApps game ↗</a>
+        <span>Made with Unity · Music: “Outer Space Loop”, CC0, OpenGameArt</span>
+        <b>© 2026 MarsMan</b>
+      </div>
+    </div>
+  </footer>
+</main>
+
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+               "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/" } }
+</script>
+<script src="https://cdn.jsdelivr.net/npm/lenis@1.1.14/dist/lenis.min.js"></script>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+/* ============================================================ data */
+const SUITS = [
+  null,
+  { name:'Crash Suit',   accent:'#ff7a3a', desc:'The standard suit you crashed in. Basic protection, nothing more.',
+    hp:0, st:0, atk:1.0, arm:0, o2:1.0, cli:0, sig:'None yet. You have a crowbar and a lot of determination.' },
+  { name:'Field Suit',   accent:'#4aa3ff', desc:'Reinforced seams, an insulated lining and a new oxygen filter.',
+    hp:25, st:20, atk:1.2, arm:10, o2:1.2, cli:20, sig:'Breathes easier on long walks: the tank lasts 20 % longer.' },
+  { name:'Pioneer Suit', accent:'#f2b43c', desc:'Light armor plates, servo-assisted joints and a bigger tank.',
+    hp:55, st:40, atk:1.45, arm:20, o2:1.4, cli:35, sig:'Servo joints: stamina comes back 30 % faster between fights.' },
+  { name:'Titan Suit',   accent:'#ff4a4a', desc:'A titanium shell, a climate core and boosted leg motors.',
+    hp:90, st:65, atk:1.75, arm:30, o2:1.65, cli:50, sig:'Saber waves: land 10 hits and cut two arcs of light, 18 m long.' },
+  { name:'Quantum Suit', accent:'#a46bff', desc:'An energy-crystal core: a shield field, its own climate and the most power.',
+    hp:130, st:90, atk:2.1, arm:40, o2:2.0, cli:65, sig:'Quantum Burst: five strikes charge a violet nova. Dash 3–20 m into your target.' },
+];
+const BOOT_LINES = [
+  ['Pressure seal','OK'], ['O₂ reserve','5 cartridges'], ['Comms','no signal'], ['Location','Wreck Plains'], ['Airlock','breathing'],
+];
+const TILES = {
+  hero:['i_space_blast','v_night_sky','b_scrap_titan_s2','r_green_hero','z_street_horde','x_nova_45','i_jump','v_dome_sunset','d_boss5_skill','e_stay_liftoff_1','r_ice_hero','b_frost_queen_s0','i_space_pods','i_descent_a'],
+  world:['r_plains_wide','r_canyon_hero','r_lava_wide','r_ice_wide','r_rocky_wide','r_volcanic_hero','r_green_wide','d_plaza_1','d_harbor_0','z_overview','r_canyon_game','r_rocky_game','d_district4_road','r_volcanic_game'],
+  guard:['b_ash_wraith_s0','b_behemoth_s2','b_magma_tyrant_s1','b_spore_mother_s1','b_frost_queen_s1','b_scrap_titan_face','d_boss1_skill','d_boss4_face','d_boss6_face','x_commander_s2','x_wyrm_s2_1','b_ash_wraith_s2','b_magma_tyrant_s2','d_boss2_face'],
+  home:['v_aerial_morning','v_aerial_morning_b','v_night_aerial','v_inside_quantum','v_inside_high','v_dome_dawn','c_dome_day','c_dome_interior','c_dome_night','c_01_base','b_spore_mother_stone','e_stay_rock_1','i_cabin_face','e_board_space_0'],
+};
+const QUADS = ['hero','world','guard','home'];
+const WALL_WORDS = { world:'WORLD', guard:'GUARDIANS', home:'HOME' };
+const SMALL_LABELS = ['SOL 214','O₂ 87 %','SECTOR 04','−71 °C','DUST 0.3','SIGNAL ··','LV 7','HULL 12 %','RELAY OFF','T+19 s','PAD 2','ICE 40 L'];
+
+/* ============================================================ helpers */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+const lerp = (a, b, t) => a + (b - a) * t;
+const smooth = t => t * t * (3 - 2 * t);
+const damp = (a, b, k, dt) => lerp(a, b, 1 - Math.exp(-k * dt));
+const ease = t => 1 - Math.pow(1 - t, 3);
+const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const isNarrow = () => innerWidth < 760;
+const root = document.documentElement;
+const SCR = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#%&+<>/';
+function scramble(el, text, dur = 520) {
+  if (!el) return;
+  if (REDUCED) { el.textContent = text; return; }
+  const from = el._target || el.textContent, len = Math.max(from.length, text.length), t0 = performance.now();
+  el._target = text;
+  cancelAnimationFrame(el._scr);
+  const step = now => {
+    const p = clamp((now - t0) / dur); let out = '';
+    for (let i = 0; i < len; i++) {
+      const c = text[i] || '';
+      if (p * len > i + 2) out += c;
+      else if (p * len > i - 4) out += c === ' ' ? ' ' : SCR[(Math.random() * SCR.length) | 0];
+      else out += from[i] || '';
+    }
+    el.textContent = out;
+    if (p < 1) el._scr = requestAnimationFrame(step); else el.textContent = text;
+  };
+  el._scr = requestAnimationFrame(step);
+}
+function loadImage(src) {
+  return new Promise(res => { const im = new Image(); im.decoding = 'async'; im.onload = () => res(im); im.onerror = () => res(null); im.src = src; });
+}
+
+/* ============================================================ loader */
+const loader = { total: 1, done: 0, shown: 0, el: $('#loader'), count: $('#ldCount'), log: $('#ldLog'), finished: false };
+function addTask(n = 1) { loader.total += n; }
+function taskDone(n = 1) { loader.done += n; }
+let bootLine = 0;
+function tickLoader(dt) {
+  if (loader.finished) return;
+  const target = clamp(loader.done / loader.total);
+  loader.shown = damp(loader.shown, target, 6, dt);
+  const v = Math.round(loader.shown * 100);
+  loader.count.textContent = String(v).padStart(3, '0');
+  loader.el.style.setProperty('--lp', loader.shown.toFixed(3));
+  const want = Math.min(BOOT_LINES.length, Math.floor(loader.shown * (BOOT_LINES.length + 0.6)));
+  while (bootLine < want) {
+    const [k, val] = BOOT_LINES[bootLine++];
+    const li = document.createElement('li');
+    li.innerHTML = `${k.toUpperCase()} ${'.'.repeat(Math.max(2, 22 - k.length))} <b>${val.toUpperCase()}</b>`;
+    loader.log.appendChild(li);
+  }
+  if (target >= 1 && loader.shown > 0.995) finishLoader();
+}
+function finishLoader() {
+  if (loader.finished) return;
+  loader.finished = true;
+  loader.count.textContent = '100';
+  setTimeout(() => { loader.el.classList.add('is-done'); }, REDUCED ? 0 : 280);
+  setTimeout(() => { loader.el.remove(); }, 1600);
+}
+setTimeout(() => { loader.done = loader.total; }, 12000);   // never hold the page hostage
+
+/* ============================================================ smooth scroll */
+let lenis = null;
+if (!REDUCED && window.Lenis) {
+  lenis = new window.Lenis({ duration: 1.15, smoothWheel: true, wheelMultiplier: 0.95, touchMultiplier: 1.4 });
+}
+$$('a[href^="#"]').forEach(a => a.addEventListener('click', e => {
+  const id = a.getAttribute('href') || '';
+  if (!id.startsWith('#') || id === '#') return;   // real links (TestFlight) open normally
+  const el = $(id);
+  if (!el) return;
+  e.preventDefault();
+  if (lenis) lenis.scrollTo(el, { offset: 0, duration: 1.6 }); else el.scrollIntoView({ behavior: REDUCED ? 'auto' : 'smooth' });
+}));
+
+/* ============================================================ layout measure */
+const chapters = $$('[data-chapter]').map(el => ({ el, id: el.dataset.chapter, top: 0, h: 0 }));
+const byId = Object.fromEntries(chapters.map(c => [c.id, c]));
+const lightEls = $$('[data-light]');
+let VH = innerHeight;
+function measure() {
+  VH = innerHeight;
+  const sy = scrollY;
+  for (const c of chapters) { const r = c.el.getBoundingClientRect(); c.top = r.top + sy; c.h = r.height; }
+}
+measure();
+addEventListener('resize', () => { measure(); stage && stage.resize(); });
+addEventListener('load', measure);
+const prog = id => { const c = byId[id]; if (!c) return 0; const span = Math.max(1, c.h - VH); return clamp((scrollY - c.top) / span); };
+const rel = id => { const c = byId[id]; return c ? (scrollY - c.top) / VH : 0; };   // viewport units relative to chapter start
+const inView = id => { const c = byId[id]; return c ? scrollY + VH > c.top && scrollY < c.top + c.h : false; };
+
+/* ============================================================ sound */
+const music = new Audio('assets/audio/outer_space_loop.mp3');
+music.loop = true; music.preload = 'none'; music.volume = 0;
+let soundOn = false, volTarget = 0, actx = null;
+function setSound(on) {
+  soundOn = on; volTarget = on ? 0.42 : 0;
+  root.classList.toggle('is-sound', on);
+  const b = $('#sndBtn'); b.setAttribute('aria-pressed', String(on)); b.setAttribute('aria-label', on ? 'Turn sound off' : 'Turn sound on');
+  if (on) { music.play().catch(() => {}); if (!actx) { try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch (_) {} } }
+  dismissSoundbar();
+}
+function dismissSoundbar() { const sb = $('#soundbar'); if (sb.classList.contains('is-gone')) return; sb.classList.add('is-gone'); root.style.setProperty('--sb', '0px'); }
+function blip(freq = 880, len = 0.05, vol = 0.035) {
+  if (!soundOn || !actx) return;
+  const o = actx.createOscillator(), g = actx.createGain(), t = actx.currentTime;
+  o.type = 'sine'; o.frequency.setValueAtTime(freq, t); o.frequency.exponentialRampToValueAtTime(freq * 1.5, t + len);
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + 0.008); g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+  o.connect(g).connect(actx.destination); o.start(t); o.stop(t + len + 0.02);
+}
+$('#sndOn').addEventListener('click', () => setSound(true));
+$('#sndOff').addEventListener('click', () => dismissSoundbar());
+$('#sndBtn').addEventListener('click', () => setSound(!soundOn));
+$$('.pill,.nav__links a,.tier__row button,.ruler a').forEach(el => el.addEventListener('pointerenter', () => blip(760 + Math.random() * 240)));
+requestAnimationFrame(() => { const sb = $('#soundbar'); root.style.setProperty('--sb', sb.offsetHeight + 'px'); });
+
+/* ============================================================ beta link (placeholder until the public TestFlight link exists) */
+const BETA_URL = '';   // PLACEHOLDER_TESTFLIGHT_PUBLIC_LINK: paste https://testflight.apple.com/join/… here
+if (BETA_URL) { const a = $('#betaLink'); a.href = BETA_URL; a.target = '_blank'; a.rel = 'noopener'; delete a.dataset.placeholder; $('#betaNote').textContent = 'Opens TestFlight on your iPhone.'; }
+
+/* ============================================================ DOM sections */
+const hlStory = $$('#story .hl');
+const worldHead = $('#world .sec-head');
+const heroUi = $('#heroUi');
+const hlState = $$('#survive .hl');
+const outline = $('#survive .outline-word');
+const survCap = $('#survive .survive__cap');
+const stNote = $('#survive .statement + .mono');
+const buildImg = $('#buildImg');
+const regionItems = $$('#regionList li').map(li => ({
+  title: li.querySelector('h3').textContent, desc: li.querySelector('p').textContent,
+  img: li.dataset.img, lv: li.dataset.lv, flag: li.dataset.flag, tags: li.dataset.tags.split(','),
+}));
+let regionIdx = -1;
+function setRegion(i) {
+  if (i === regionIdx) return; regionIdx = i;
+  const r = regionItems[i];
+  scramble($('#riTitle'), r.title);
+  $('#riDesc').textContent = r.desc;
+  $('#riLv').textContent = r.lv;
+  scramble($('#riFlag'), r.flag, 380);
+  $('#riTags').innerHTML = r.tags.map(t => `<li>${t}</li>`).join('');
+  $('#wcCur').textContent = String(i + 1).padStart(2, '0');
+  blip(520 + i * 40, 0.06, 0.03);
+}
+// guardians
+const gItems = $$('#gList li');
+const gFrame = $('#gFrame');
+const gImgs = gItems.map((li, i) => { const im = document.createElement('img'); im.alt = li.querySelector('h3').textContent; im.decoding = 'async'; im.loading = i < 2 ? 'eager' : 'lazy'; im.src = li.dataset.img; if (i === 0) im.classList.add('is-on'); gFrame.appendChild(im); return im; });
+let gIdx = 0;
+function setGuardian(i) {
+  if (i === gIdx) return;
+  gItems[gIdx].classList.remove('is-on'); gImgs[gIdx].classList.remove('is-on');
+  gIdx = i; const li = gItems[i];
+  li.classList.add('is-on'); gImgs[i].classList.add('is-on');
+  scramble($('#gName'), li.querySelector('h3').textContent);
+  $('#gEpi').textContent = li.dataset.epi;
+  $('#gCore').textContent = 'Core · ' + li.dataset.core;
+  $('#gTag').textContent = `Guardian ${String(i + 1).padStart(2, '0')} / 07`;
+  $('#gSkills').innerHTML = li.dataset.skills.split(',').map(s => `<li>${s}</li>`).join('');
+  blip(420 + i * 30, 0.07, 0.03);
+}
+// armory + tier selector
+const tierBtns = $$('#tierHero button');
+const tierItems = $$('#tierList li');
+const statRows = $$('#armStats div');
+const STAT_MAX = { hp:130, st:90, atk:2.1, arm:40, o2:2.0, cli:65 };
+let tier = 1;
+function renderTier(t) {
+  const s = SUITS[t];
+  root.style.setProperty('--accent', s.accent);
+  $('#tierName').textContent = s.name;
+  tierBtns.forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.tier === t)));
+  tierItems.forEach(li => li.classList.toggle('is-on', +li.dataset.tier === t));
+  $('#armDesc').textContent = s.desc;
+  $('#armSig p').textContent = s.sig;
+  const vals = [
+    [s.hp / STAT_MAX.hp, '+' + s.hp], [s.st / STAT_MAX.st, '+' + s.st], [(s.atk - 1) / (STAT_MAX.atk - 1), '×' + s.atk.toFixed(s.atk % 1 ? (s.atk * 10 % 1 ? 2 : 1) : 1)],
+    [s.arm / STAT_MAX.arm, s.arm + ' %'], [(s.o2 - 1) / (STAT_MAX.o2 - 1), '×' + s.o2.toFixed(s.o2 * 10 % 1 ? 2 : 1)], [s.cli / STAT_MAX.cli, s.cli + ' %'],
+  ];
+  statRows.forEach((row, i) => { row.querySelector('.bar i').style.setProperty('--v', Math.max(0.03, vals[i][0]).toFixed(3)); row.querySelector('.val').textContent = vals[i][1]; });
+}
+function setTier(t, fromUser) {
+  t = clamp(t, 1, 5) | 0;
+  if (t === tier && !fromUser) return;
+  tier = t; renderTier(t);
+  if (stage) stage.setSuit(t);
+  if (fromUser) blip(600 + t * 60, 0.08, 0.04);
+}
+tierBtns.forEach(b => b.addEventListener('click', () => setTier(+b.dataset.tier, true)));
+renderTier(1);
+
+// ruler + nav
+const rulerLinks = $$('.ruler a'), navLinks = $$('.nav__links a');
+const RULER_OF = { top:'top', story:'story', acts:'story', world:'world', survive:'survive', systems:'survive', build:'build', village:'build', guardians:'guardians', beyond:'guardians', armory:'armory', beta:'beta', end:'beta' };
+let rulerOn = '';
+function updateChrome() {
+  let cur = 'top';
+  for (const c of chapters) if (scrollY + VH * 0.5 >= c.top) cur = c.id;
+  const r = RULER_OF[cur] || 'top';
+  if (r !== rulerOn) {
+    rulerOn = r;
+    rulerLinks.forEach(a => a.classList.toggle('is-on', a.dataset.ruler === r));
+    navLinks.forEach(a => a.classList.toggle('is-on', a.dataset.nav === r));
+  }
+  // nav/ruler color over the light briefing
+  let light = false;
+  for (const el of lightEls) { const b = el.getBoundingClientRect(); if (b.top < 60 && b.bottom > 60) light = true; }
+  root.classList.toggle('on-light', light);
+}
+
+// carousel index with a dwell on each card: rotate during the middle half of each step, hold still otherwise
+function worldIndex() { const raw = prog('world') * (regionItems.length - 1), n = Math.floor(raw); return Math.min(regionItems.length - 1, n + smooth(clamp((raw - n - 0.25) / 0.5))); }
+function updateDom() {
+  // story highlight lines
+  const ps = prog('story');
+  hlStory.forEach((el, i) => el.style.setProperty('--p', smooth(clamp((ps - 0.05 - i * 0.12) / 0.14)).toFixed(3)));
+  heroUi.style.opacity = (1 - smooth(clamp((prog('top') - 0.12) / 0.45))).toFixed(3);
+  // survive
+  const pv = prog('survive');
+  outline.style.setProperty('--d', clamp(pv / 0.24).toFixed(3));
+  outline.style.setProperty('--o', (1 - smooth(clamp((pv - 0.3) / 0.12))).toFixed(3));
+  survCap.style.setProperty('--o', (1 - smooth(clamp((pv - 0.26) / 0.1))).toFixed(3));
+  hlState.forEach((el, i) => {
+    const a = smooth(clamp((pv - 0.6 - i * 0.065) / 0.08));
+    el.style.setProperty('--p', a.toFixed(3));
+    el.style.opacity = (pv < 0.5 ? 0 : smooth(clamp((pv - 0.5) / 0.08))).toFixed(3);
+  });
+  stNote.style.setProperty('--so', smooth(clamp((pv - 0.86) / 0.08)).toFixed(3));
+  // build image slow push-in
+  if (inView('build')) buildImg.style.setProperty('--z', (1.1 - 0.1 * prog('build')).toFixed(4));
+  // world
+  if (inView('world')) { setRegion(Math.round(worldIndex())); worldHead.style.opacity = (1 - smooth(clamp((prog('world') - 0.03) / 0.08)) * 0.88).toFixed(3); }
+  // guardians
+  if (inView('guardians')) setGuardian(Math.min(gItems.length - 1, Math.floor(prog('guardians') * gItems.length * 0.999)));
+  // armory
+  if (inView('armory') && scrollY > byId.armory.top - VH * 0.2) {
+    const t = 1 + Math.min(4, Math.floor(prog('armory') * 5 * 0.999));
+    if (t !== tier) setTier(t, false);
+  }
+}
+
+/* ============================================================ WebGL stage */
+let stage = null;
+function webglOK() { try { const c = document.createElement('canvas'); return !!(window.WebGLRenderingContext && (c.getContext('webgl2') || c.getContext('webgl'))); } catch (_) { return false; } }
+
+function makeStage() {
+  const canvas = $('#stage');
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, powerPreference: 'high-performance' });
+  renderer.setClearColor(0x07080b, 1);
+  renderer.localClippingEnabled = true;
+  const maxTex = renderer.capabilities.maxTextureSize;
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(32, innerWidth / innerHeight, 0.05, 140);
+  const camPos = new THREE.Vector3(0, 1.2, 8.4), camLook = new THREE.Vector3(0, 0.98, 0);
+
+  /* ---------- LED wall ---------- */
+  const AW = maxTex >= 8192 && !isNarrow() ? 6144 : 4096, AH = Math.round(AW / 6);
+  const atlas = document.createElement('canvas'); atlas.width = AW; atlas.height = AH;
+  const actx2 = atlas.getContext('2d');
+  actx2.fillStyle = '#040507'; actx2.fillRect(0, 0, AW, AH);
+  const atlasTex = new THREE.CanvasTexture(atlas);
+  atlasTex.generateMipmaps = false; atlasTex.minFilter = THREE.LinearFilter; atlasTex.magFilter = THREE.LinearFilter;
+  atlasTex.colorSpace = THREE.NoColorSpace;
+  const wallU = {
+    uTex: { value: atlasTex }, uTexRes: { value: new THREE.Vector2(AW, AH) }, uTime: { value: 0 }, uBright: { value: 0.0 },
+    uTint: { value: new THREE.Color('#ff8a4c') }, uTintMix: { value: 0.18 }, uPitch: { value: AW > 4096 ? 3.0 : 2.0 }, uSat: { value: 0.7 },
+  };
+  const wallMat = new THREE.ShaderMaterial({
+    uniforms: wallU, side: THREE.BackSide, depthWrite: false,
+    vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
+    fragmentShader: `
+      uniform sampler2D uTex; uniform vec2 uTexRes; uniform float uTime, uBright, uTintMix, uPitch, uSat; uniform vec3 uTint; varying vec2 vUv;
+      float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+      void main(){
+        vec2 uv = vec2(1.0 - vUv.x, vUv.y);
+        vec2 px = uv * uTexRes;
+        vec2 cell = floor(px / uPitch);
+        vec3 col = texture2D(uTex, (cell + 0.5) * uPitch / uTexRes).rgb;
+        col = mix(vec3(dot(col, vec3(0.299, 0.587, 0.114))), col, uSat);
+        vec2 f = fract(px / uPitch) - 0.5;
+        float led = smoothstep(0.5, 0.26, max(abs(f.x), abs(f.y)));
+        col *= mix(0.42, 1.22, led);
+        float pnl = hash(floor(px / 128.0) + floor(uTime * 1.7));
+        col *= 1.0 - step(0.986, pnl) * 0.55;
+        col *= 0.94 + 0.06 * sin(px.y * 0.9 + uTime * 6.0);
+        vec2 g = abs(fract(px / 64.0) - 0.5);
+        col += smoothstep(0.485, 0.5, max(g.x, g.y)) * 0.035;
+        col = mix(col, col * uTint * 1.55, uTintMix);
+        float fade = smoothstep(0.02, 0.24, vUv.y) * smoothstep(0.98, 0.74, vUv.y);
+        gl_FragColor = vec4(col * uBright * fade, 1.0);
+      }`,
+  });
+  const WALL_R = 15, WALL_H = 13;
+  const wall = new THREE.Mesh(new THREE.CylinderGeometry(WALL_R, WALL_R, WALL_H, 180, 1, true), wallMat);
+  wall.position.set(0, 1.4, 2.4); wall.renderOrder = -10;
+  scene.add(wall);
+  const quadAngle = k => { const thc = 2 * Math.PI * (1 - (k + 0.5) / 4); return Math.PI - thc; };
+  let wallAngle = quadAngle(0), wallTarget = wallAngle;
+
+  // atlas painting
+  function rng(seed) { let s = seed >>> 0; return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296); }
+  function pack(cols, rows, r) {
+    const used = Array.from({ length: rows }, () => Array(cols).fill(false)), out = [];
+    const sizes = [[3, 2], [2, 2], [4, 3], [2, 1], [3, 3], [1, 1], [2, 3], [1, 2], [4, 2], [5, 3]];
+    for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
+      if (used[y][x]) continue;
+      const order = sizes.slice().sort(() => r() - 0.5);
+      for (const [w, h] of order.concat([[1, 1]])) {
+        if (x + w > cols || y + h > rows) continue;
+        let ok = true;
+        for (let yy = y; yy < y + h && ok; yy++) for (let xx = x; xx < x + w; xx++) if (used[yy][xx]) { ok = false; break; }
+        if (!ok) continue;
+        for (let yy = y; yy < y + h; yy++) for (let xx = x; xx < x + w; xx++) used[yy][xx] = true;
+        out.push({ x, y, w, h }); break;
+      }
+    }
+    return out;
+  }
+  const COLS = 12, ROWS = 8, QW = AW / 4, CELL = QW / COLS, GAP = Math.max(3, Math.round(CELL * 0.035));
+  const layouts = QUADS.map((q, k) => pack(COLS, ROWS, rng(91 + k * 17)));
+  function cover(g, img, x, y, w, h) {
+    const s = Math.max(w / img.width, h / img.height), iw = img.width * s, ih = img.height * s;
+    g.save(); g.beginPath(); g.rect(x, y, w, h); g.clip(); g.drawImage(img, x + (w - iw) / 2, y + (h - ih) / 2, iw, ih); g.restore();
+  }
+  function paintSmall(g, x, y, w, h, r, label) {
+    const grd = g.createLinearGradient(x, y, x, y + h); grd.addColorStop(0, '#15181d'); grd.addColorStop(1, '#0a0b0e');
+    g.fillStyle = grd; g.fillRect(x, y, w, h);
+    g.fillStyle = 'rgba(242,239,233,.55)'; g.font = `500 ${Math.round(CELL * 0.14)}px "IBM Plex Mono", monospace`;
+    g.textBaseline = 'top'; g.fillText(label, x + CELL * 0.1, y + CELL * 0.1);
+    g.strokeStyle = 'rgba(242,239,233,.35)'; g.lineWidth = 2;
+    const cx = x + w / 2, cy = y + h / 2, s = CELL * 0.07;
+    g.beginPath(); g.moveTo(cx - s, cy); g.lineTo(cx + s, cy); g.moveTo(cx, cy - s); g.lineTo(cx, cy + s); g.stroke();
+    if (r() > 0.5) { g.fillStyle = 'rgba(255,107,44,.85)'; g.fillRect(x + CELL * 0.1, y + h - CELL * 0.16, Math.max(6, (w - CELL * 0.2) * r()), CELL * 0.035); }
+  }
+  async function paintQuad(k) {
+    const q = QUADS[k], names = TILES[q], r = rng(300 + k), ox = k * QW, rects = layouts[k];
+    const imgs = await Promise.all(names.map(n => loadImage(`assets/img/t/${n}.webp`)));
+    let ii = 0, si = k * 3;
+    for (const rc of rects) {
+      const x = ox + rc.x * CELL + GAP, y = rc.y * CELL + GAP, w = rc.w * CELL - GAP * 2, h = rc.h * CELL - GAP * 2;
+      const area = rc.w * rc.h;
+      if (area >= 2 && imgs.length && r() > 0.08) { const im = imgs[ii++ % imgs.length]; if (im) cover(actx2, im, x, y, w, h); else paintSmall(actx2, x, y, w, h, r, SMALL_LABELS[si++ % SMALL_LABELS.length]); }
+      else if (r() > 0.35) paintSmall(actx2, x, y, w, h, r, SMALL_LABELS[si++ % SMALL_LABELS.length]);
+      else { actx2.fillStyle = '#08090c'; actx2.fillRect(x, y, w, h); }
+    }
+    const word = WALL_WORDS[q];
+    if (word) {
+      actx2.save();
+      actx2.globalAlpha = 0.34; actx2.fillStyle = '#ffffff';
+      try { actx2.fontStretch = 'expanded'; } catch (_) {}
+      let fs = AH * 0.36; actx2.font = `800 ${fs}px Archivo, Arial, sans-serif`;
+      const tw = actx2.measureText(word).width; if (tw > QW * 0.92) { fs *= QW * 0.92 / tw; actx2.font = `800 ${fs}px Archivo, Arial, sans-serif`; }
+      actx2.textAlign = 'center'; actx2.textBaseline = 'middle';
+      actx2.fillText(word, ox + QW / 2, AH * 0.52);
+      actx2.restore();
+    }
+    atlasTex.needsUpdate = true;
+  }
+
+  /* ---------- hero wordmark ---------- */
+  const markCv = document.createElement('canvas'); markCv.width = 2048; markCv.height = 440;
+  const markTex = new THREE.CanvasTexture(markCv); markTex.colorSpace = THREE.SRGBColorSpace; markTex.anisotropy = 4;
+  function paintMark() {
+    const g = markCv.getContext('2d'); g.clearRect(0, 0, 2048, 440);
+    try { g.fontStretch = 'expanded'; } catch (_) {}
+    let fs = 380; g.font = `800 ${fs}px Archivo, Arial, sans-serif`;
+    let tw = g.measureText('MARSMAN').width; fs *= 1980 / tw; g.font = `800 ${fs}px Archivo, Arial, sans-serif`;
+    g.fillStyle = '#ffffff'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.shadowColor = 'rgba(255,140,80,.35)'; g.shadowBlur = 30;
+    g.fillText('MARSMAN', 1024, 232);
+    markTex.needsUpdate = true;
+  }
+  const markMat = new THREE.MeshBasicMaterial({ map: markTex, transparent: true, depthWrite: false, opacity: 1 });
+  const mark = new THREE.Mesh(new THREE.PlaneGeometry(1, 440 / 2048), markMat);
+  mark.position.set(0, 1.62, -4.2); mark.renderOrder = -5;
+  scene.add(mark);
+
+  /* ---------- lights / environment ---------- */
+  const hemi = new THREE.HemisphereLight(0xffe4cc, 0x1a1110, 0.55); scene.add(hemi);
+  const key = new THREE.DirectionalLight(0xffd8b4, 2.6); key.position.set(3.2, 5, 4.5); scene.add(key);
+  const fill = new THREE.DirectionalLight(0x6fe3ff, 0.65); fill.position.set(-4.5, 2.2, 3); scene.add(fill);
+  const back = new THREE.DirectionalLight(0xff7a3a, 2.4); back.position.set(-1.6, 3.2, -5); scene.add(back);
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  addTask();
+  new THREE.TextureLoader().load('assets/img/env_mars.webp', t => {
+    t.mapping = THREE.EquirectangularReflectionMapping; t.colorSpace = THREE.SRGBColorSpace;
+    scene.environment = pmrem.fromEquirectangular(t).texture; t.dispose(); taskDone();
+  }, undefined, () => taskDone());
+
+  /* ---------- dust + crosshairs ---------- */
+  const DUST = isNarrow() ? 260 : 620;
+  const dGeo = new THREE.BufferGeometry(), dPos = new Float32Array(DUST * 3), dSeed = new Float32Array(DUST);
+  for (let i = 0; i < DUST; i++) { dPos[i * 3] = (Math.random() - 0.5) * 18; dPos[i * 3 + 1] = Math.random() * 7 - 1.2; dPos[i * 3 + 2] = Math.random() * 13 - 8; dSeed[i] = Math.random(); }
+  dGeo.setAttribute('position', new THREE.BufferAttribute(dPos, 3)); dGeo.setAttribute('seed', new THREE.BufferAttribute(dSeed, 1));
+  const dustU = { uTime: { value: 0 }, uOpacity: { value: 0.6 }, uPx: { value: renderer.getPixelRatio() } };
+  const dust = new THREE.Points(dGeo, new THREE.ShaderMaterial({
+    uniforms: dustU, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+    vertexShader: `attribute float seed; uniform float uTime, uPx; varying float vA;
+      void main(){ vec3 p = position; p.x += mod(uTime * (0.08 + seed * 0.14) + seed * 18.0, 18.0) - 9.0 - position.x * 0.0;
+        p.x = mod(position.x + uTime * (0.08 + seed * 0.14) + 9.0, 18.0) - 9.0; p.y += sin(uTime * 0.4 + seed * 30.0) * 0.12;
+        vec4 mv = modelViewMatrix * vec4(p, 1.0); gl_Position = projectionMatrix * mv;
+        gl_PointSize = (1.4 + seed * 2.6) * uPx * (6.0 / -mv.z); vA = 0.35 + 0.65 * fract(seed * 7.13); }`,
+    fragmentShader: `uniform float uOpacity; varying float vA; void main(){ vec2 c = gl_PointCoord - 0.5; float d = length(c); if (d > 0.5) discard;
+        gl_FragColor = vec4(vec3(1.0, 0.82, 0.66), (1.0 - d * 2.0) * vA * uOpacity); }`,
+  }));
+  dust.renderOrder = 5; scene.add(dust);
+  const crossPts = [];
+  for (let i = 0; i < 64; i++) {
+    const a = (i / 64) * Math.PI * 2 + Math.random() * 0.2, rr = 9 + Math.random() * 3.5, y = Math.random() * 7 - 1.5;
+    const cx = Math.sin(a) * rr, cz = Math.cos(a) * rr - 1, s = 0.09;
+    crossPts.push(cx - s, y, cz, cx + s, y, cz, cx, y - s, cz, cx, y + s, cz);
+  }
+  const crossGeo = new THREE.BufferGeometry(); crossGeo.setAttribute('position', new THREE.Float32BufferAttribute(crossPts, 3));
+  const crossMat = new THREE.LineBasicMaterial({ color: 0xf2efe9, transparent: true, opacity: 0.32, depthWrite: false });
+  const crosses = new THREE.LineSegments(crossGeo, crossMat); crosses.renderOrder = -4; scene.add(crosses);
+
+  /* ---------- pedestal ring + contact shadow ---------- */
+  function ringTexture() {
+    const c = document.createElement('canvas'); c.width = c.height = 512; const g = c.getContext('2d'), m = 256;
+    g.strokeStyle = 'rgba(255,255,255,.9)'; g.lineWidth = 3; g.beginPath(); g.arc(m, m, 236, 0, Math.PI * 2); g.stroke();
+    g.lineWidth = 1.5; g.globalAlpha = 0.55; g.beginPath(); g.arc(m, m, 214, 0, Math.PI * 2); g.stroke();
+    for (let i = 0; i < 72; i++) { const a = i / 72 * Math.PI * 2, l = i % 6 === 0 ? 20 : 9; g.beginPath(); g.moveTo(m + Math.cos(a) * 236, m + Math.sin(a) * 236); g.lineTo(m + Math.cos(a) * (236 - l), m + Math.sin(a) * (236 - l)); g.stroke(); }
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+  }
+  function shadowTexture() {
+    const c = document.createElement('canvas'); c.width = c.height = 256; const g = c.getContext('2d');
+    const grd = g.createRadialGradient(128, 128, 0, 128, 128, 128); grd.addColorStop(0, 'rgba(0,0,0,.75)'); grd.addColorStop(0.55, 'rgba(0,0,0,.28)'); grd.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = grd; g.fillRect(0, 0, 256, 256); return new THREE.CanvasTexture(c);
+  }
+  const ringMat = new THREE.MeshBasicMaterial({ map: ringTexture(), transparent: true, depthWrite: false, opacity: 0.55, color: 0xff8a4c, blending: THREE.AdditiveBlending });
+  const ring = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 2.4), ringMat); ring.rotation.x = -Math.PI / 2; ring.position.y = 0.01;
+  const shadow = new THREE.Mesh(new THREE.PlaneGeometry(1.9, 1.9), new THREE.MeshBasicMaterial({ map: shadowTexture(), transparent: true, depthWrite: false, opacity: 0.85 }));
+  shadow.rotation.x = -Math.PI / 2; shadow.position.y = 0.005;
+
+  /* ---------- suits ---------- */
+  const astroRoot = new THREE.Group(); scene.add(astroRoot);
+  const pivot = new THREE.Group(); astroRoot.add(pivot);
+  astroRoot.add(ring); astroRoot.add(shadow);
+  const RIM = { color: { value: new THREE.Color('#ff7a3a') }, k: { value: 0.85 } };
+  const sweepMat = new THREE.MeshBasicMaterial({ color: 0xffb68a, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
+  const sweep = new THREE.Mesh(new THREE.TorusGeometry(0.62, 0.012, 8, 96), sweepMat); sweep.rotation.x = Math.PI / 2; astroRoot.add(sweep);
+  const sweepDisc = new THREE.Mesh(new THREE.CircleGeometry(0.62, 64), new THREE.MeshBasicMaterial({ color: 0xff8a4c, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
+  sweepDisc.rotation.x = -Math.PI / 2; astroRoot.add(sweepDisc);
+  const suits = {};   // tier -> {group, mixer, actions, planeBelow, planeAbove, mats, head}
+  const loaderGL = new GLTFLoader();
+  const H = 2.4;
+  function patch(m) {
+    m.onBeforeCompile = sh => {
+      sh.uniforms.uRim = RIM.color; sh.uniforms.uRimK = RIM.k;
+      sh.fragmentShader = sh.fragmentShader
+        .replace('#include <common>', '#include <common>\nuniform vec3 uRim; uniform float uRimK;')
+        .replace('#include <map_fragment>', `#include <map_fragment>
+          float mmL = dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722));
+          float mmS = max(diffuseColor.r, max(diffuseColor.g, diffuseColor.b)) - min(diffuseColor.r, min(diffuseColor.g, diffuseColor.b));
+          float mmVisor = (1.0 - smoothstep(0.006, 0.028, mmL)) * (1.0 - smoothstep(0.012, 0.045, mmS));
+          diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.46, 0.42, 0.40), mmVisor);`)
+        .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor = mix(roughnessFactor, 0.06, mmVisor);')
+        .replace('#include <metalnessmap_fragment>', '#include <metalnessmap_fragment>\nmetalnessFactor = mix(metalnessFactor, 1.0, mmVisor);')
+        .replace('#include <opaque_fragment>', `float mmFr = pow(1.0 - clamp(dot(normal, normalize(vViewPosition)), 0.0, 1.0), 2.5);
+          outgoingLight += uRim * mmFr * uRimK * (1.0 - mmVisor * 0.7);
+          #include <opaque_fragment>`);
+    };
+    m.customProgramCacheKey = () => 'mm-suit-3';
+  }
+  function loadSuit(t) {
+    if (suits[t]) return suits[t].ready;
+    const s = { t, group: new THREE.Group(), mixer: null, actions: {}, mats: [], below: new THREE.Plane(new THREE.Vector3(0, -1, 0), 0), above: new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), head: null, loaded: false };
+    suits[t] = s;
+    s.ready = new Promise(res => {
+      const onGltf = gltf => {
+        const m = gltf.scene;
+        m.traverse(o => {
+          if (o.isMesh) {
+            o.frustumCulled = false; o.castShadow = false;
+            const mat = o.material;
+            mat.roughness = 0.6; mat.metalness = 0.0; mat.envMapIntensity = 0.9;
+            mat.clippingPlanes = [s.below]; patch(mat); s.mats.push(mat);
+          }
+        });
+        const box = new THREE.Box3().setFromObject(m); const size = new THREE.Vector3(); box.getSize(size);
+        const k = H / Math.max(0.01, size.y);
+        m.scale.setScalar(k);
+        const box2 = new THREE.Box3().setFromObject(m), c = new THREE.Vector3(); box2.getCenter(c);
+        m.position.set(-c.x, -box2.min.y, -c.z);
+        s.group.add(m); s.group.visible = false; pivot.add(s.group);
+        s.head = m.getObjectByName('Head') || m.getObjectByName('head') || null;
+        s.mixer = new THREE.AnimationMixer(m);
+        for (const clip of gltf.animations) { const a = s.mixer.clipAction(clip); s.actions[clip.name] = a; }
+        const idle = s.actions.Idle; if (idle) { idle.play(); }
+        ['Wave', 'Cheer', 'Smash'].forEach(n => { const a = s.actions[n]; if (a) { a.setLoop(THREE.LoopOnce, 1); a.clampWhenFinished = false; } });
+        s.mixer.addEventListener('finished', () => { const i = s.actions.Idle; if (i) i.reset().fadeIn(0.35).play(); });
+        s.loaded = true; res(s);
+      };
+      // binary .glb where the host serves it; otherwise the same bytes as base64 text (the artifact host only serves web types)
+      const fromB64 = () => fetch(`assets/models/suit_${t}.b64.txt`).then(r => { if (!r.ok) throw new Error(r.status); return r.text(); }).then(txt => {
+        const str = atob(txt.replace(/\s+/g, '')), bin = new Uint8Array(str.length);
+        for (let i = 0; i < str.length; i++) bin[i] = str.charCodeAt(i);
+        loaderGL.parse(bin.buffer, '', onGltf, () => res(null));
+      }).catch(() => res(null));
+      fetch(`assets/models/suit_${t}.glb`).then(r => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
+        .then(buf => loaderGL.parse(buf, '', onGltf, fromB64)).catch(fromB64);
+    });
+    return s.ready;
+  }
+  let cur = null, swap = null;   // swap = {from, to, t}
+  async function setSuit(t) {
+    const s = await loadSuit(t);
+    if (!s) return;
+    if (cur === s && !swap) return;
+    if (!cur) { cur = s; s.group.visible = true; s.below.constant = 99; return; }
+    if (swap) { swap.from.group.visible = false; swap.from.mats.forEach(m => m.clippingPlanes = [swap.from.below]); cur = swap.to; swap = null; }
+    if (cur === s) return;
+    const from = cur; from.mats.forEach(m => m.clippingPlanes = [from.above]);
+    s.mats.forEach(m => m.clippingPlanes = [s.below]);
+    s.group.visible = true;
+    swap = { from, to: s, t: 0 };
+    cur = s;
+  }
+  function play(name, fade = 0.3) {
+    if (!cur || !cur.actions[name]) return;
+    const a = cur.actions[name], idle = cur.actions.Idle;
+    if (idle) idle.fadeOut(fade);
+    a.reset().fadeIn(fade).play();
+  }
+
+  /* ---------- world cards ---------- */
+  const cardsRoot = new THREE.Group(); cardsRoot.position.set(0, 0.92, 0); scene.add(cardsRoot);
+  const CARD_R = 3.45, CARD_W = 2.6, CARD_H = 1.46, STEP = 0.6;
+  function cardGeo(w, h, R) {
+    const g = new THREE.PlaneGeometry(w, h, 28, 1), p = g.attributes.position;
+    for (let i = 0; i < p.count; i++) { const x = p.getX(i), a = x / R; p.setX(i, Math.sin(a) * R); p.setZ(i, Math.cos(a) * R - R); }
+    g.computeVertexNormals(); return g;
+  }
+  const cGeo = cardGeo(CARD_W, CARD_H, CARD_R);
+  const blankTex = new THREE.DataTexture(new Uint8Array([20, 22, 26, 255]), 1, 1); blankTex.needsUpdate = true;
+  const cards = regionItems.map((r, i) => {
+    const u = { uMap: { value: blankTex }, uActive: { value: 0 }, uOpacity: { value: 0 }, uTime: { value: 0 }, uAspect: { value: CARD_W / CARD_H }, uHas: { value: 0 } };
+    const mat = new THREE.ShaderMaterial({
+      uniforms: u, transparent: true, depthWrite: false, side: THREE.DoubleSide,
+      vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+      fragmentShader: `uniform sampler2D uMap; uniform float uActive, uOpacity, uTime, uAspect, uHas; varying vec2 vUv;
+        float rbox(vec2 p, vec2 b, float r){ vec2 q = abs(p) - b + r; return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r; }
+        void main(){
+          vec2 uv = vUv; vec2 p = (uv - 0.5) * vec2(uAspect, 1.0);
+          float d = rbox(p, vec2(uAspect * 0.5, 0.5), 0.035);
+          float mask = 1.0 - smoothstep(-0.002, 0.002, d);
+          vec2 dir = uv - 0.5; float ca = 0.0035 + 0.012 * (1.0 - uActive);
+          vec3 col = vec3(texture2D(uMap, uv + dir * ca).r, texture2D(uMap, uv).g, texture2D(uMap, uv - dir * ca).b);
+          col = mix(vec3(0.07, 0.08, 0.1) + 0.03 * step(0.98, fract(uv.x * 24.0)) + 0.03 * step(0.97, fract(uv.y * 14.0)), col, uHas);
+          col *= 0.93 + 0.07 * sin(uv.y * 820.0 + uTime * 4.0);
+          col *= mix(0.42, 1.0, uActive);
+          float rim = 1.0 - smoothstep(0.0, 0.012, -d);
+          col += rim * vec3(1.0, 0.85, 0.75) * (0.18 + 0.4 * uActive);
+          gl_FragColor = vec4(col, mask * uOpacity);
+        }`,
+    });
+    const mesh = new THREE.Mesh(cGeo, mat); mesh.renderOrder = 3; mesh.position.z = CARD_R;
+    const holder = new THREE.Group(); holder.add(mesh); cardsRoot.add(holder);
+    let req = false;
+    return { mesh, holder, u, i, get requested() { return req; }, load() { if (req) return; req = true; new THREE.TextureLoader().load(r.img, t => { t.colorSpace = THREE.NoColorSpace; t.minFilter = THREE.LinearMipmapLinearFilter; t.anisotropy = 4; u.uMap.value = t; u.uHas.value = 1; }); } };
+  });
+  cardsRoot.visible = false;
+
+  /* ---------- light briefing panel + wire planet ---------- */
+  const lightU = { uRes: { value: new THREE.Vector2(1, 1) }, uTop: { value: -1 }, uBot: { value: -2 }, uDpr: { value: 1 } };
+  const lightQuad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({
+    uniforms: lightU, depthTest: false, depthWrite: false, transparent: true,
+    vertexShader: `void main(){ gl_Position = vec4(position.xy, 0.0, 1.0); }`,
+    fragmentShader: `uniform vec2 uRes; uniform float uTop, uBot, uDpr;
+      void main(){
+        vec2 p = gl_FragCoord.xy; float x = p.x / uRes.x * 2.0 - 1.0;
+        float sag = uRes.y * 0.045 * (1.0 - x * x);
+        float top = uTop - sag, bot = uBot + sag;
+        if (p.y > top || p.y < bot) discard;
+        vec2 uv = p / uRes;
+        vec3 c = mix(vec3(0.905, 0.918, 0.926), vec3(0.83, 0.85, 0.866), clamp(length((uv - vec2(0.5, 0.55)) * vec2(1.2, 1.0)), 0.0, 1.0));
+        float s = 26.0 * uDpr; vec2 g = abs(fract(p / s) - 0.5);
+        c -= (1.0 - smoothstep(0.0, 0.5 / s * 2.0, 0.5 - max(g.x, g.y))) * 0.028;
+        float S = 180.0 * uDpr; vec2 q = mod(p - vec2(uRes.x * 0.5, 0.0), S) - S * 0.5; float L = 7.0 * uDpr, W = 0.8 * uDpr;
+        float cr = max(step(abs(q.x), W) * step(abs(q.y), L), step(abs(q.y), W) * step(abs(q.x), L));
+        c = mix(c, vec3(0.55, 0.58, 0.62), cr * 0.85);
+        float e = smoothstep(top - 3.0 * uDpr, top, p.y) + smoothstep(bot + 3.0 * uDpr, bot, p.y);
+        c = mix(c, vec3(1.0), clamp(e, 0.0, 1.0) * 0.9);
+        float sh = smoothstep(top - 60.0 * uDpr, top, p.y) * 0.06; c -= sh;
+        gl_FragColor = vec4(c, 1.0);
+      }`,
+  }));
+  lightQuad.frustumCulled = false; lightQuad.renderOrder = 20;
+  lightQuad.onBeforeRender = r => r.clearDepth();
+  scene.add(lightQuad);
+  const planet = new THREE.Group(); planet.renderOrder = 22; scene.add(planet);
+  const PR = 1.55;
+  const lineMat = new THREE.LineBasicMaterial({ color: 0x1d2126, transparent: true, opacity: 0.5 });
+  const lineMat2 = new THREE.LineBasicMaterial({ color: 0x1d2126, transparent: true, opacity: 0.22 });
+  const orange = new THREE.LineBasicMaterial({ color: 0xd9480f, transparent: true, opacity: 0.95 });
+  const dashMat = new THREE.LineDashedMaterial({ color: 0xd9480f, dashSize: 0.06, gapSize: 0.05, transparent: true, opacity: 0.9 });
+  const spherePt = (lat, lon, r = PR) => new THREE.Vector3(Math.cos(lat) * Math.sin(lon) * r, Math.sin(lat) * r, Math.cos(lat) * Math.cos(lon) * r);
+  const addLine = (pts, mat, closed) => { const g = new THREE.BufferGeometry().setFromPoints(pts); const l = closed ? new THREE.LineLoop(g, mat) : new THREE.Line(g, mat); l.renderOrder = 22; planet.add(l); return l; };
+  for (let la = -75; la <= 75; la += 15) { const pts = []; for (let i = 0; i < 96; i++) pts.push(spherePt(la * Math.PI / 180, i / 96 * Math.PI * 2)); addLine(pts, la === 0 ? lineMat : lineMat2, true); }
+  for (let lo = 0; lo < 180; lo += 22.5) { const pts = []; for (let i = 0; i <= 96; i++) pts.push(spherePt(-Math.PI / 2 + i / 96 * Math.PI * 2, lo * Math.PI / 180)); addLine(pts, lineMat2, false); }
+  const craterAt = (lat, lon, rad, mat) => {
+    const c = spherePt(lat, lon), n = c.clone().normalize(), t1 = new THREE.Vector3(0, 1, 0).cross(n).normalize(), t2 = n.clone().cross(t1);
+    const pts = []; for (let i = 0; i < 48; i++) { const a = i / 48 * Math.PI * 2; pts.push(c.clone().addScaledVector(t1, Math.cos(a) * rad).addScaledVector(t2, Math.sin(a) * rad).normalize().multiplyScalar(PR * 1.002)); }
+    return addLine(pts, mat, true);
+  };
+  [[0.5, 1.1, 0.16], [-0.35, 2.4, 0.22], [0.9, -0.6, 0.12], [-0.8, -1.9, 0.18], [0.2, 3.0, 0.1], [-0.15, -0.9, 0.09], [0.62, 2.2, 0.08]].forEach(([a, b, r]) => craterAt(a, b, r, lineMat));
+  const CRASH = [-0.09, 0.42], COLONY = [0.36, 0.95];
+  craterAt(CRASH[0], CRASH[1], 0.07, orange); craterAt(CRASH[0], CRASH[1], 0.12, orange);
+  craterAt(COLONY[0], COLONY[1], 0.06, lineMat); craterAt(COLONY[0], COLONY[1], 0.1, lineMat);
+  const crashPt = spherePt(CRASH[0], CRASH[1], PR * 1.01), colonyPt = spherePt(COLONY[0], COLONY[1], PR * 1.01);
+  const tStart = new THREE.Vector3(-2.7, 2.6, 1.4), tMid = new THREE.Vector3(-0.6, 2.4, 2.4);
+  const traj = new THREE.QuadraticBezierCurve3(tStart, tMid, crashPt).getPoints(80);
+  const trajLine = addLine(traj, dashMat, false); trajLine.computeLineDistances();
+  const pathPt = traj[30].clone();
+  const occluder = new THREE.Mesh(new THREE.SphereGeometry(PR * 0.995, 48, 32), new THREE.MeshBasicMaterial({ colorWrite: false, transparent: true, depthWrite: true }));
+  occluder.renderOrder = 21; planet.add(occluder);
+  planet.visible = false;
+  const labels = { colony: $('#lbColony'), crash: $('#lbCrash'), path: $('#lbPath') };
+
+  /* ---------- plasma (visor dive) ---------- */
+  const plasmaU = { uMap: { value: blankTex }, uAmt: { value: 0 }, uTime: { value: 0 }, uRes: { value: new THREE.Vector2(1, 1) }, uImg: { value: new THREE.Vector2(2048, 1158) } };
+  const plasma = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({
+    uniforms: plasmaU, depthTest: false, depthWrite: false, transparent: true,
+    vertexShader: `void main(){ gl_Position = vec4(position.xy, 0.0, 1.0); }`,
+    fragmentShader: `uniform sampler2D uMap; uniform float uAmt, uTime; uniform vec2 uRes, uImg;
+      float hash(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
+      void main(){
+        vec2 uv = gl_FragCoord.xy / uRes;
+        float sa = uRes.x / uRes.y, ia = uImg.x / uImg.y;
+        vec2 t = uv - 0.5; if (sa > ia) t.y *= ia / sa; else t.x *= sa / ia;
+        float z = 1.18 - 0.12 * uAmt + 0.02 * sin(uTime * 0.3);
+        t /= z; t += vec2(0.02 * sin(uTime * 0.11), 0.015 * cos(uTime * 0.13));
+        vec2 dir = t * 0.012 * (1.4 - uAmt);
+        vec3 col = vec3(texture2D(uMap, t + 0.5 + dir).r, texture2D(uMap, t + 0.5).g, texture2D(uMap, t + 0.5 - dir).b);
+        float r = length((uv - 0.5) * vec2(sa, 1.0));
+        float n = hash(floor(gl_FragCoord.xy / 2.0) + floor(uTime * 24.0));
+        float reveal = smoothstep(uAmt * 1.25 - 0.18, uAmt * 1.25, r + n * 0.08);
+        float a = (1.0 - reveal) * clamp(uAmt * 3.0, 0.0, 1.0);
+        col += (n - 0.5) * 0.09;
+        col *= 1.0 - 0.45 * r * r;
+        gl_FragColor = vec4(col, a);
+      }`,
+  }));
+  plasma.frustumCulled = false; plasma.renderOrder = 30; scene.add(plasma);
+  let plasmaReq = false;
+  function needPlasma() { if (plasmaReq) return; plasmaReq = true; new THREE.TextureLoader().load('assets/img/key_plasma.webp', t => { t.colorSpace = THREE.NoColorSpace; plasmaU.uMap.value = t; }); }
+
+  /* ---------- interaction: drag the suit ---------- */
+  const rot = { yaw: 0.38, pitch: 0, vy: 0, vp: 0, drag: false, lx: 0, ly: 0, moved: 0, auto: true, reset: false };
+  const hit = $('#stageHit');
+  hit.addEventListener('pointerdown', e => { rot.drag = true; rot.lx = e.clientX; rot.ly = e.clientY; rot.moved = 0; rot.auto = false; rot.reset = false; hit.setPointerCapture(e.pointerId); });
+  hit.addEventListener('pointermove', e => {
+    if (!rot.drag) return;
+    const dx = e.clientX - rot.lx, dy = e.clientY - rot.ly; rot.lx = e.clientX; rot.ly = e.clientY; rot.moved += Math.abs(dx) + Math.abs(dy);
+    rot.vy = dx * 0.0085; rot.vp = dy * 0.004; rot.yaw += rot.vy; rot.pitch = clamp(rot.pitch + rot.vp, -0.35, 0.35);
+  });
+  const endDrag = () => { if (!rot.drag) return; rot.drag = false; if (rot.moved < 6) { play(['Wave', 'Cheer'][Math.random() < 0.7 ? 0 : 1]); blip(990, 0.08, 0.04); } };
+  hit.addEventListener('pointerup', endDrag); hit.addEventListener('pointercancel', endDrag);
+  $('#resetQ').addEventListener('click', () => { rot.reset = true; rot.auto = false; blip(700, 0.06); });
+  const gz = { x: $('#gzX'), y: $('#gzY'), z: $('#gzZ'), xd: $('#gzXd'), yd: $('#gzYd'), zd: $('#gzZd') };
+  const quatSpans = $$('#quat span');
+  const fmt = v => { const s = v.toFixed(2); return v >= 0.995 ? '1.0' : v <= -0.995 ? '-1.0' : s.replace(/^(-?)0\./, '$1.'); };
+
+  /* ---------- sizing ---------- */
+  let W = 1, Hh = 1, dpr = 1;
+  function resize() {
+    W = innerWidth; Hh = innerHeight; dpr = Math.min(devicePixelRatio || 1, isNarrow() ? 1.6 : 1.75);
+    renderer.setPixelRatio(dpr); renderer.setSize(W, Hh, false);
+    camera.aspect = W / Hh; camera.fov = W / Hh < 0.8 ? 46 : W / Hh < 1.2 ? 38 : 32; camera.updateProjectionMatrix();
+    lightU.uRes.value.set(W * dpr, Hh * dpr); lightU.uDpr.value = dpr; plasmaU.uRes.value.set(W * dpr, Hh * dpr); dustU.uPx.value = dpr;
+    const dist = camPos.z - mark.position.z, vh = 2 * dist * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)), vw = vh * camera.aspect;
+    const mw = Math.min(vw * (camera.aspect < 0.8 ? 0.98 : 0.94), 13.5); mark.scale.set(mw, mw, 1);
+    mark.position.y = camera.aspect < 0.8 ? 2.55 : 1.62;
+    const cd = camPos.z - CARD_R, cvw = 2 * cd * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.aspect;
+    cardsRoot.scale.setScalar(Math.min(1, cvw * 0.86 / CARD_W));
+  }
+  resize();
+
+  /* ---------- per-frame choreography ---------- */
+  const tmpV = new THREE.Vector3(), tmpQ = new THREE.Quaternion(), tmpE = new THREE.Euler();
+  let time = 0, ringSpin = 0, vis = 0, idleLookT = 7, cardF = 0;
+  const S = { sat: 0.7, wall: 0, tint: 0.18, mark: 1, astro: 1, ax: 0, az: 0, as: 1, cards: 0, planet: 0, plasma: 0, dive: 0, dust: 0.6 };
+  function targets() {
+    const T = {};
+    const hero = prog('top'), story = byId.story, sRel = rel('story');
+    const pw = prog('world'), pv = prog('survive');
+    // defaults
+    T.wall = 0.06; T.mark = 0; T.astro = 0; T.ax = 0; T.ay = 0; T.as = 1; T.cards = 0; T.planet = 0; T.plasma = 0; T.dive = 0; T.dust = 0.35; T.quad = 0; T.tint = 0.18; T.sat = 0.7; T.rim = 0.55; T.face = 0;
+    if (scrollY < story.top + VH * 0.3) {               // hero
+      T.wall = 0.46 - hero * 0.1; T.tint = 0.26; T.sat = 0.62; T.mark = 1 - smooth(clamp((hero - 0.35) / 0.5)) * 0.85; T.astro = 1; T.dust = 0.6; T.quad = 0;
+    }
+    if (sRel > -1.2 && scrollY < byId.acts.top) { T.planet = smooth(clamp((sRel + 0.4) / 0.6)) * (1 - smooth(clamp((rel('acts') + 0.55) / 0.4))); }
+    if (inView('world') || (scrollY > byId.acts.top + byId.acts.h - VH * 0.6 && scrollY < byId.world.top)) {
+      T.wall = 0.34; T.quad = 1; T.sat = 0.8; T.cards = smooth(clamp((rel('world') + 0.5) / 0.6)) * (1 - smooth(clamp((rel('world') - (byId.world.h / VH - 1) - 0.1) / 0.5))); T.dust = 0.5;
+    }
+    if (inView('survive')) {
+      const enter = smooth(clamp((rel('survive') + 0.6) / 0.6));
+      T.wall = 0.14 * (1 - pv); T.face = 1; T.astro = enter * (1 - smooth(clamp((pv - 0.62) / 0.1))); T.dive = smooth(clamp((pv - 0.2) / 0.28)); T.plasma = smooth(clamp((pv - 0.36) / 0.2));
+      T.dust = 0.5 * (1 - T.plasma);
+    }
+    if (inView('systems')) { const s = rel('systems'); T.plasma = Math.max(T.plasma, 1 - smooth(clamp((s + 0.1) / 0.55))); }
+    if (inView('build') || inView('village')) { T.wall = 0.06; T.quad = 3; T.dust = 0.25; }
+    if (inView('guardians') || inView('beyond')) { T.wall = 0.22; T.quad = 2; T.dust = 0.3; T.tint = 0.3; T.sat = 0.6; }
+    if (inView('armory')) {
+      const enter = smooth(clamp((rel('armory') + 0.7) / 0.7)), leave = smooth(clamp((rel('armory') - (byId.armory.h / VH - 1) - 0.15) / 0.5));
+      const tall = camera.aspect < 0.8;
+      T.wall = 0.2; T.quad = 0; T.astro = enter * (1 - leave); T.ax = 0; T.ay = tall ? 0.62 : 0; T.as = tall ? 0.66 : isNarrow() ? 0.8 : 0.92; T.tint = 0.3; T.sat = 0.35; T.rim = 0.32; T.dust = 0.45;
+    }
+    if (inView('beta') || inView('end')) { T.wall = 0.05; T.dust = 0.4; }
+    return T;
+  }
+  function frame(dt) {
+    time += dt;
+    const T = targets();
+    const k = REDUCED ? 30 : 5;
+    S.wall = damp(S.wall, T.wall, 3, dt); S.mark = damp(S.mark, T.mark, 6, dt); S.astro = damp(S.astro, T.astro, k, dt);
+    S.cards = damp(S.cards, T.cards, 6, dt); S.planet = damp(S.planet, T.planet, 6, dt); S.plasma = damp(S.plasma, T.plasma, 8, dt);
+    S.dive = damp(S.dive, T.dive, 7, dt); S.dust = damp(S.dust, T.dust, 3, dt); S.sat = damp(S.sat, T.sat, 3, dt); S.rim = damp(S.rim ?? 0.55, T.rim, 3, dt); S.face = damp(S.face ?? 0, T.face, 3, dt); S.as = damp(S.as, T.as, 4, dt); S.tint = damp(S.tint, T.tint, 3, dt);
+    // wall rotation to the quadrant of the section
+    wallTarget = quadAngle(T.quad);
+    let dA = wallTarget - wallAngle; dA = Math.atan2(Math.sin(dA), Math.cos(dA)); wallAngle += dA * (1 - Math.exp(-2.2 * dt));
+    wall.rotation.y = wallAngle + Math.sin(time * 0.05) * 0.03 + (scrollY / VH) * 0.004;
+    wallU.uTime.value = time; wallU.uBright.value = S.wall; wallU.uTintMix.value = S.tint; wallU.uSat.value = S.sat; RIM.k.value = S.rim;
+    wallU.uTint.value.lerp(new THREE.Color(inView('armory') ? SUITS[tier].accent : inView('guardians') ? '#ff5a3a' : '#ff8a4c'), 1 - Math.exp(-3 * dt));
+    markMat.opacity = S.mark; mark.visible = S.mark > 0.01;
+    dustU.uTime.value = time; dustU.uOpacity.value = S.dust;
+    crossMat.opacity = 0.32 * clamp(S.wall * 2.2);
+
+    // astronaut
+    astroRoot.scale.setScalar(S.as);
+    astroRoot.position.x = damp(astroRoot.position.x, T.ax, 4, dt);
+    astroRoot.position.y = damp(astroRoot.position.y, T.ay, 4, dt);
+    const toWorld = h => h >= 98 ? 99 : astroRoot.position.y + h * astroRoot.scale.y;
+    const vTarget = clamp(S.astro);
+    vis = REDUCED ? vTarget : vTarget;
+    astroRoot.visible = vis > 0.003 && !!cur;
+    const clipH = vis >= 0.999 ? 99 : -0.05 + vis * (H + 0.15);
+    if (cur && !swap) cur.below.constant = toWorld(clipH);
+    sweep.position.y = clamp(clipH, 0, H); sweepDisc.position.y = sweep.position.y;
+    const sweeping = (vis > 0.002 && vis < 0.998) || !!swap;
+    sweepMat.opacity = damp(sweepMat.opacity, sweeping ? 0.9 : 0, 10, dt); sweepDisc.material.opacity = sweepMat.opacity * 0.18;
+    if (swap) {
+      swap.t += dt / (REDUCED ? 0.01 : 0.95);
+      const hh = -0.05 + ease(clamp(swap.t)) * (H + 0.15);
+      swap.to.below.constant = toWorld(Math.min(hh, clipH)); swap.from.above.constant = -toWorld(hh);
+      sweep.position.y = clamp(hh, 0, H); sweepDisc.position.y = sweep.position.y;
+      if (swap.t >= 1) { swap.from.group.visible = false; swap.from.mats.forEach(m => m.clippingPlanes = [swap.from.below]); swap.to.below.constant = toWorld(clipH); swap = null; }
+    }
+    ringMat.opacity = 0.5 * vis; shadow.material.opacity = 0.85 * vis;
+    ringSpin += dt * 0.12; ring.rotation.z = ringSpin;
+    ringMat.color.lerp(new THREE.Color(SUITS[tier].accent), 1 - Math.exp(-4 * dt));
+    RIM.color.value.lerp(new THREE.Color(SUITS[tier].accent), 1 - Math.exp(-4 * dt));
+    // rotation: auto spin, drag inertia, reset, dive faces camera
+    if (!rot.drag) {
+      rot.yaw += rot.vy; rot.vy *= Math.pow(0.0025, dt); rot.vp *= Math.pow(0.0025, dt);
+      if (rot.reset) { rot.yaw = damp(rot.yaw, Math.round(rot.yaw / (Math.PI * 2)) * Math.PI * 2, 6, dt); rot.pitch = damp(rot.pitch, 0, 6, dt); if (Math.abs(rot.pitch) < 0.002) rot.reset = false; }
+      else if (rot.auto && !REDUCED) rot.yaw += dt * 0.22;
+      rot.pitch = damp(rot.pitch, 0, 1.2, dt);
+    }
+    const heroScrollYaw = prog('top') * 1.1 + (inView('armory') ? prog('armory') * Math.PI * 2 : 0);
+    let yaw = rot.yaw + heroScrollYaw, pitch = rot.pitch;
+    const faceYaw = Math.round(yaw / (Math.PI * 2)) * Math.PI * 2;
+    yaw = lerp(yaw, faceYaw + 0.32 * (1 - smooth(clamp(S.dive * 1.4))), smooth(clamp(Math.max(S.face, S.dive * 1.6))));
+    pitch = lerp(pitch, 0, S.dive);
+    pivot.rotation.set(pitch, yaw, 0);
+    // occasional look-around
+    if (cur && !swap && vis > 0.9) { idleLookT -= dt; if (idleLookT < 0) { idleLookT = 9 + Math.random() * 6; if (!rot.drag) play('IdleLook', 0.5); } }
+    for (const kk in suits) { const s = suits[kk]; if (s.mixer && s.group.visible) s.mixer.update(dt); }
+
+    // HUD readouts
+    if (scrollY < byId.story.top) {
+      pivot.getWorldQuaternion(tmpQ);
+      const q = [tmpQ.x, tmpQ.y, tmpQ.z, tmpQ.w]; quatSpans.forEach((sp, i) => sp.textContent = fmt(q[i]));
+      const ax = [new THREE.Vector3(1, 0, 0), new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 0, 1)].map(v => v.applyQuaternion(tmpQ));
+      const set = (ln, dot, v) => { const x = v.x * 30, y = -v.y * 30; ln.setAttribute('x2', x.toFixed(1)); ln.setAttribute('y2', y.toFixed(1)); dot.setAttribute('transform', `translate(${x.toFixed(1)} ${y.toFixed(1)})`); dot.style.opacity = v.z < -0.2 ? 0.45 : 1; };
+      set(gz.x, gz.xd, ax[0]); set(gz.y, gz.yd, ax[1]); set(gz.z, gz.zd, ax[2]);
+    }
+
+    // camera (with the visor dive)
+    const px = (pointer.x - 0.5), py = (pointer.y - 0.5);
+    tmpV.copy(camPos); tmpV.x += px * 0.35; tmpV.y += -py * 0.18;
+    const look = camLook.clone();
+    if (S.dive > 0.001 && cur) {
+      const hp = new THREE.Vector3(0, H * 0.84, 0);
+      if (cur.head) { cur.head.getWorldPosition(hp); hp.y += 0.06; }
+      const eye = new THREE.Vector3(hp.x, hp.y + 0.03, hp.z + 1.75);
+      const kd = ease(S.dive);
+      tmpV.lerp(eye, kd); look.lerp(new THREE.Vector3(hp.x, hp.y, hp.z + 0.4), kd);
+    }
+    camera.position.lerp(tmpV, 1 - Math.exp(-6 * dt));
+    camLookCur.lerp(look, 1 - Math.exp(-6 * dt));
+    camera.lookAt(camLookCur);
+
+    // cards (textures preload one per frame once the visitor scrolls past the hero)
+    if (scrollY > VH * 0.6) { const nx = cards.find(c => !c.requested); if (nx) nx.load(); }
+    cardsRoot.visible = S.cards > 0.01;
+    if (cardsRoot.visible) {
+      const fIdx = worldIndex();
+      cardF = damp(cardF, fIdx, 7, dt);
+      cards.forEach(c => {
+        const a = (c.i - cardF) * STEP;
+        c.holder.rotation.y = a;
+        const ab = Math.abs(a);
+        c.holder.position.set(0, Math.sin(time * 0.6 + c.i) * 0.02, 0);
+        c.u.uActive.value = 1 - smooth(clamp(ab / STEP));
+        c.u.uOpacity.value = S.cards * (1 - smooth(clamp((ab - 1.4) / 0.6)));
+        c.u.uTime.value = time;
+        c.mesh.renderOrder = 3 + Math.round((3 - ab) * 10);
+        c.holder.visible = c.u.uOpacity.value > 0.01;
+        if (ab < 2.2) c.load();
+      });
+    }
+
+    // light panel follows the DOM rect of the briefing
+    let top = Infinity, bot = -Infinity;
+    for (const el of lightEls) { const r = el.getBoundingClientRect(); if (r.top < top) top = r.top; if (r.bottom > bot) bot = r.bottom; }
+    const onScreen = top < Hh && bot > 0;
+    lightQuad.visible = onScreen;
+    if (onScreen) { lightU.uTop.value = (Hh - top) * dpr; lightU.uBot.value = (Hh - bot) * dpr; }
+    // planet
+    planet.visible = S.planet > 0.01 && onScreen;
+    if (planet.visible) {
+      const narrow = camera.aspect < 0.8;
+      planet.position.set(narrow ? 0.1 : 1.95, narrow ? -1.2 : 0.95, 0);
+      planet.scale.setScalar((narrow ? 0.56 : 0.8) * (0.9 + 0.1 * S.planet));
+      planet.rotation.set(0.32, -0.6 + time * 0.06 + rel('story') * 0.35, -0.12);
+      lineMat.opacity = 0.55 * S.planet; lineMat2.opacity = 0.24 * S.planet; orange.opacity = 0.95 * S.planet; dashMat.opacity = 0.9 * S.planet;
+      dashMat.dashOffset = -time * 0.15;
+      planet.updateMatrixWorld(true);
+      const lab = (el, p) => {
+        const w = p.clone().applyMatrix4(planet.matrixWorld), n = w.clone().sub(planet.getWorldPosition(new THREE.Vector3())).normalize(), toCam = camera.position.clone().sub(w).normalize();
+        const s = w.project(camera), front = n.dot(toCam) > 0.05;
+        const sx = (s.x + 1) / 2 * W, sy = (1 - s.y) / 2 * Hh, flip = sx > W - 230;
+        el.classList.toggle('is-flip', flip);
+        el.style.transform = `translate(${sx.toFixed(1)}px, ${sy.toFixed(1)}px) translate(${flip ? 'calc(-100% - 16px)' : '16px'},-50%)`;
+        el.style.opacity = (front ? S.planet : 0).toFixed(2);
+      };
+      lab(labels.colony, colonyPt); lab(labels.crash, crashPt); lab(labels.path, pathPt);
+    } else { labels.colony.style.opacity = labels.crash.style.opacity = labels.path.style.opacity = 0; }
+    // plasma
+    if (S.plasma > 0.001 || T.dive > 0.05) needPlasma();
+    plasma.visible = S.plasma > 0.002; plasmaU.uAmt.value = S.plasma; plasmaU.uTime.value = time;
+
+    renderer.render(scene, camera);
+  }
+  const camLookCur = camLook.clone();
+  camera.position.copy(camPos); camera.lookAt(camLook);
+
+  /* ---------- boot ---------- */
+  async function boot() {
+    addTask(5);
+    document.fonts && document.fonts.load('800 100px Archivo').catch(() => {});
+    const fontsReady = (document.fonts ? document.fonts.ready : Promise.resolve()).then(() => { paintMark(); taskDone(); });
+    const first = loadSuit(1).then(s => { taskDone(); if (s) { cur = s; s.group.visible = true; s.below.constant = 99; } });
+    await fontsReady;
+    await paintQuad(0); taskDone();
+    await first;
+    Promise.all([paintQuad(1), paintQuad(2), paintQuad(3)]).then(() => taskDone(2));
+    setTimeout(() => { [2, 3, 4, 5].reduce((p, t) => p.then(() => loadSuit(t)), Promise.resolve()); }, 2500);
+  }
+  boot();
+  return { frame, resize, setSuit, play, get ready() { return !!cur; } };
+}
+
+/* ============================================================ main loop */
+const pointer = { x: 0.5, y: 0.5 };
+addEventListener('pointermove', e => { pointer.x = e.clientX / innerWidth; pointer.y = e.clientY / innerHeight; }, { passive: true });
+if (webglOK()) {
+  try { stage = makeStage(); root.classList.add('webgl'); }
+  catch (err) { console.warn('[MarsMan] WebGL stage failed', err); stage = null; root.classList.add('no-webgl'); taskDone(99); }
+} else { root.classList.add('no-webgl'); }
+taskDone();   // the page itself
+let last = performance.now(), waved = false;
+function loop(now) {
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  if (lenis) lenis.raf(now);
+  tickLoader(dt);
+  if (!document.hidden) {
+    updateDom(); updateChrome();
+    if (stage) stage.frame(dt);
+  }
+  music.volume = damp(music.volume, volTarget, 2.2, dt);
+  if (!soundOn && music.volume < 0.005 && !music.paused) music.pause();
+  if (stage && !waved && inView('armory') && prog('armory') > 0.97) { waved = true; stage.play('Cheer'); }
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+
+</body>
+</html>
